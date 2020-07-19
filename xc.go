@@ -7,6 +7,8 @@ import (
 	"math/rand"
 	"net"
 	"os"
+	"os/signal"
+	"syscall"
 	"strings"
 	"time"
 
@@ -27,7 +29,6 @@ func main() {
 	flag.Parse()
 
 	rand.Seed(time.Now().UnixNano())
-
 	if *listenPtr {
 		// banner
 		banner := `
@@ -58,6 +59,7 @@ func main() {
 				log.Println(err)
 				continue
 			}
+			signal.Ignore(syscall.SIGINT)
 			stream, err := session.Accept()
 			if err != nil {
 				log.Println(err)
@@ -92,7 +94,6 @@ func main() {
 			ip = flag.Arg(0)
 			port = flag.Arg(1)
 		}
-
 		// keep connecting (in case the server is exiting ungracefully we can just restart it and get a connection back)
 		for {
 			conn, err := net.Dial("tcp", fmt.Sprintf("%s:%s", ip, port))
