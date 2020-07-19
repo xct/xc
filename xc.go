@@ -59,7 +59,7 @@ func main() {
 				log.Println(err)
 				continue
 			}
-			signal.Ignore(syscall.SIGINT)
+			signal.Notify(make(chan os.Signal))
 			stream, err := session.Accept()
 			if err != nil {
 				log.Println(err)
@@ -67,6 +67,7 @@ func main() {
 			}
 			log.Printf("Stream established")
 			server.Run(session, stream)
+			signal.Reset(syscall.SIGINT)
 			conn.Close()
 		}
 	} else {
