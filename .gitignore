@@ -19,3 +19,4 @@ xc
 packrd
 plugins/*
 !plugins/plugins.go
+shell/keys.go

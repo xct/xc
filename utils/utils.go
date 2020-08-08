@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -65,6 +66,16 @@ func Save(dst string, data string) bool {
 	return true
 }
 
+// SaveRaw ...
+func SaveRaw(dst string, data string) bool {
+	err := ioutil.WriteFile(dst, []byte(data), 0644)
+	if err != nil {
+		log.Println(err)
+		return false
+	}
+	return true
+}
+
 // Load file from disk and return base64 encoded representation
 func Load(src string) (string, bool) {
 	data, err := ioutil.ReadFile(src)
@@ -74,6 +85,16 @@ func Load(src string) (string, bool) {
 	}
 	b64 := base64.StdEncoding.EncodeToString(data)
 	return b64, true
+}
+
+// LoadRaw ...
+func LoadRaw(src string) ([]byte, bool) {
+	data, err := ioutil.ReadFile(src)
+	if err != nil {
+		log.Println(err)
+		return nil, false
+	}
+	return data, true
 }
 
 // CopyFile copies a file from a source path to a destination path
@@ -151,6 +172,16 @@ func DownloadListen(dst string, s *yamux.Session) {
 		return
 	}
 	Save(dst, string(line))
+}
+
+// ByteToHex ...
+func ByteToHex(s []byte) string {
+	d := make([]byte, hex.DecodedLen(len(s)))
+	n, err := hex.Decode(d, s)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return fmt.Sprintf("%s", d[:n])
 }
 
 // Not sure where to put those, they are windows specific but their is no linux equivalent

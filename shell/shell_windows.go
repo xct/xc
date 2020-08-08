@@ -185,3 +185,7 @@ func Seppuku(c net.Conn) {
 	fmt.Println(binPath)
 	go Exec(fmt.Sprintf("ping localhost -n 5 > nul & del %s", binPath), c)
 }
+
+func StartSSHServer(port int, c net.Conn) {
+	fmt.Println("Not implemented")
+}

@@ -8,14 +8,16 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"syscall"
 	"strings"
+	"syscall"
 	"time"
 
 	"./client"
 	"./server"
 	"github.com/hashicorp/yamux"
 )
+
+//go:generate go run scripts/includekeys.go
 
 func usage() {
 	fmt.Printf("Usage: \n")
@@ -40,7 +42,7 @@ func main() {
 		fmt.Println(banner)
 
 		// server mode
-		listener, err := net.Listen("tcp", fmt.Sprintf(":%d", *portPtr))
+		listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", *portPtr))
 		if err != nil {
 			log.Fatalln("Unable to bind to port")
 		}
@@ -100,6 +102,7 @@ func main() {
 			conn, err := net.Dial("tcp", fmt.Sprintf("%s:%s", ip, port))
 			if err != nil {
 				log.Println("Couldn't connect. Trying again...")
+				time.Sleep(3000 * time.Millisecond)
 				continue
 			}
 			log.Printf("Connected to %s\n", conn.RemoteAddr().String())

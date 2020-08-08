@@ -1,15 +1,16 @@
 # xc
 
-Netcat like reverse shell for Windows. Can be run as server on Windows & Linux, while the Client part is only implemented for Windows (yet).
+Netcat like reverse shell for Linux & Windows. This is still experimental so pull requests are welcome :)
 
 ## Features
 
 * File Up-/Download
 * Port Forwarding
-* Change users (like runas)
-* Connect to Meterpreter Listener (windows/meterpreter/reverse_tcp)
-* Quick vulnerability check for recent impactful CVEs
-* Simple Plugin System
+* Change user context
+* Connect to Meterpreter Listener: [windows/linux]/x64/meterpreter/reverse_tcp)
+* Quick vulnerability check for recent CVEs on Windows
+* Plugin System
+* Spawn SSH Server on Linux
 
 ## Examples
 
@@ -32,3 +33,5 @@ Linux:
 ```
 make
 ```
+
+You probably want to replace the ssh keys in the keys folder if you plan to use the ssh server on linux. These will be used to spawn a ssh server with the !ssh command on linux.
