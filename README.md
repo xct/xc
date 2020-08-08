@@ -4,13 +4,61 @@ Netcat like reverse shell for Linux & Windows. This is still experimental so pul
 
 ## Features
 
-* File Up-/Download
-* Port Forwarding
-* Change user context
-* Connect to Meterpreter Listener: [windows/linux]/x64/meterpreter/reverse_tcp)
-* Quick vulnerability check for recent CVEs on Windows
-* Plugin System
-* Spawn SSH Server on Linux
+### Windows
+
+``` 
+ !runas <username> <password> <domain>
+   - restart xc with the specified user
+ !runasps <username> <password> <domain>
+   - restart xc with the specified user using powershell
+ !met <port>
+   - connects to a x64/meterpreter/reverse_tcp listener
+ !upload <src> <dst>
+   - uploads a file to the target
+ !download <src> <dst>
+   - downloads a file from the target
+ !portfwd <localport> <remoteaddr> <remoteport>
+   - local portforwarding (similar to ssh -L)
+ !vulns
+   - checks for common vulnerabilities
+ !plugins
+   - lists available plugins
+ !plugin <plugin>
+   - execute a plugin
+ !rc <port>
+   - connects to a local bind shell and restarts this client over it
+ !spawn <port>
+   - spawns another client on the specified port
+ !shell
+ !powershell
+ !exit
+``` 
+
+### Linux
+
+```
+ !runas <username> <password> <domain>
+   - restart xc with the specified user
+ !met <port>
+   - connects to a x64/meterpreter/reverse_tcp listener
+ !upload <src> <dst>
+   - uploads a file to the target
+ !download <src> <dst>
+   - downloads a file from the target
+ !portfwd <localport> <remoteaddr> <remoteport>
+   - local portforwarding (similar to ssh -L)
+ !plugins
+   - lists available plugins
+ !plugin <plugin>
+   - execute a plugin
+ !rc <port>
+   - connects to a local bind shell and restarts this client over it
+ !spawn <port>
+   - spawns another client on the specified port
+ !shell
+ !ssh <port>
+ !exit
+``` 
 
 ## Examples
 
