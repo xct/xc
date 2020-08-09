@@ -13,6 +13,9 @@ import (
 	"github.com/hashicorp/yamux"
 )
 
+var gc net.Conn
+var gs *yamux.Session
+
 type augReader struct {
 	innerReader io.Reader
 	augFunc     func([]byte) []byte
@@ -46,7 +49,8 @@ var (
 	session *yamux.Session
 )
 
-func forward(port string) {
+// opens the listening socket on the server side
+func lfwd(port string) {
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
 	if err != nil {
 		log.Fatalln(err)
@@ -62,6 +66,25 @@ func forward(port string) {
 		if err != nil {
 			panic(err)
 		}
+		go utils.CopyIO(fwdCon, proxy)
+		go utils.CopyIO(proxy, fwdCon)
+	}
+}
+
+// connects to the listening port on the client side
+func rfwd(host string, port string, s *yamux.Session, c net.Conn) {
+	for {
+		proxy, err := s.Accept()
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		fwdCon, err := net.Dial("tcp", fmt.Sprintf("%s:%s", host, port))
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		defer fwdCon.Close()
 		go utils.CopyIO(fwdCon, proxy)
 		go utils.CopyIO(proxy, fwdCon)
 	}
@@ -86,10 +109,16 @@ func handleCmd(buf []byte) []byte {
 			dst := argv[2]
 			go utils.DownloadListen(dst, session)
 		}
-	case "!portfwd":
+	case "!lfwd":
 		if len(argv) == 4 {
 			lport := argv[1]
-			go forward(lport)
+			go lfwd(lport)
+		}
+	case "!rfwd":
+		if len(argv) == 4 {
+			host := argv[2]
+			port := argv[3]
+			go rfwd(host, port, gs, gc)
 		}
 	case "!upload":
 		if len(argv) != 3 {
@@ -103,6 +132,8 @@ func handleCmd(buf []byte) []byte {
 
 // Run runs the main server loop
 func Run(s *yamux.Session, c net.Conn) {
+	gc = c
+	gs = s
 	session = s
 	defer c.Close()
 	fmt.Printf("[xc]:")

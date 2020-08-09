@@ -17,8 +17,10 @@ Netcat like reverse shell for Linux & Windows. This is still experimental so pul
    - uploads a file to the target
  !download <src> <dst>
    - downloads a file from the target
- !portfwd <localport> <remoteaddr> <remoteport>
-   - local portforwarding (similar to ssh -L)
+ !lfwd <localport> <remoteaddr> <remoteport>
+   - local portforwarding (like ssh -L)
+ !rfwd <remoteport> <localaddr> <localport>
+   - remote portforwarding (like ssh -R)
  !vulns
    - checks for common vulnerabilities
  !plugins
@@ -31,6 +33,8 @@ Netcat like reverse shell for Linux & Windows. This is still experimental so pul
    - spawns another client on the specified port
  !shell
  !powershell
+ !net <sample.exe> <arg1> <arg2> ...   
+   - Runs a .NET assembly from the server on the client without touching disk
  !exit
 ``` 
 
@@ -45,8 +49,10 @@ Netcat like reverse shell for Linux & Windows. This is still experimental so pul
    - uploads a file to the target
  !download <src> <dst>
    - downloads a file from the target
- !portfwd <localport> <remoteaddr> <remoteport>
-   - local portforwarding (similar to ssh -L)
+ !lfwd <localport> <remoteaddr> <remoteport>
+   - local portforwarding (like ssh -L)
+ !rfwd <remoteport> <localaddr> <localport>
+   - remote portforwarding (like ssh -R)
  !plugins
    - lists available plugins
  !plugin <plugin>
