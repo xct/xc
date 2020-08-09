@@ -134,6 +134,25 @@ func UploadConnect(dst string, s *yamux.Session) {
 	Save(dst, string(line))
 }
 
+// UploadConnectRaw ...
+func UploadConnectRaw(s *yamux.Session) ([]byte, error) {
+	stream, err := s.Open()
+	if err != nil {
+		return nil, err
+	}
+	defer stream.Close()
+	line, err := ioutil.ReadAll(stream)
+	if err != nil {
+		return nil, err
+	}
+	raw, err := base64.StdEncoding.DecodeString(string(line))
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	return raw, nil
+}
+
 // DownloadConnect ...
 func DownloadConnect(src string, s *yamux.Session) {
 	stream, err := s.Open()

