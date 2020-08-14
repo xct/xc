@@ -38,6 +38,7 @@ func main() {
 		\ \/ / __|
 		>  < (__ 
 		/_/\_\___| by @xct_de
+		           build: 0000000000000000
 			`
 		fmt.Println(banner)
 
