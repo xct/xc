@@ -15,4 +15,4 @@ windows64:
 	GOOS=windows GOARCH=amd64 ${BUILD} -o ${OUT_WINDOWS} ${SRC}
 
 clean:
-	rm -f ${OUT_LINUX} ${OUT_WINDOWS} shell/keys.go
+	rm -f ${OUT_LINUX} ${OUT_WINDOWS} shell/keys.go meter/sc.go

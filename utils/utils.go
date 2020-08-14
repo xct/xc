@@ -1,13 +1,18 @@
 package utils
 
 import (
+	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
+	cr "crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
-	"math/rand"
+	mr "math/rand"
 	"net"
 	"os"
 	"regexp"
@@ -16,6 +21,8 @@ import (
 	"github.com/hashicorp/yamux"
 )
 
+// AESKEY is used to encrypt shellcode on compiletime & decrypt it at runtime
+var AESKEY = []byte("5339679294566578")
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 // Exists ...
@@ -28,7 +35,7 @@ func Exists(name string) bool {
 func RandSeq(n int) string {
 	b := make([]rune, n)
 	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
+		b[i] = letters[mr.Intn(len(letters))]
 	}
 	return string(b)
 }
@@ -222,4 +229,42 @@ func GetHotfixes(raw string) []string {
 		kbs = append(kbs, match)
 	}
 	return kbs
+}
+
+// Encrypt ...
+func Encrypt(key []byte, text []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	paddingLen := aes.BlockSize - (len(text) % aes.BlockSize)
+	paddingText := bytes.Repeat([]byte{byte(paddingLen)}, paddingLen)
+	textWithPadding := append(text, paddingText...)
+	ciphertext := make([]byte, aes.BlockSize+len(textWithPadding))
+	iv := ciphertext[:aes.BlockSize]
+	if _, err := io.ReadFull(cr.Reader, iv); err != nil {
+		return nil, err
+	}
+	cfbEncrypter := cipher.NewCFBEncrypter(block, iv)
+	cfbEncrypter.XORKeyStream(ciphertext[aes.BlockSize:], textWithPadding)
+	return ciphertext, nil
+}
+
+// Decrypt ...
+func Decrypt(key []byte, text []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	if (len(text) % aes.BlockSize) != 0 {
+		return nil, errors.New("wrong blocksize")
+	}
+	iv := text[:aes.BlockSize]
+	decodedCipherMsg := text[aes.BlockSize:]
+	cfbDecrypter := cipher.NewCFBDecrypter(block, iv)
+	cfbDecrypter.XORKeyStream(decodedCipherMsg, decodedCipherMsg)
+	length := len(decodedCipherMsg)
+	paddingLen := int(decodedCipherMsg[length-1])
+	result := decodedCipherMsg[:(length - paddingLen)]
+	return result, nil
 }

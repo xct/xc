@@ -2,6 +2,7 @@ package shell
 
 import (
 	"os"
+	"regexp"
 	"runtime"
 	"syscall"
 	"unsafe"
@@ -107,4 +108,23 @@ func CreateProcessWithLogon(username string, password string, domain string, pat
 		startupInfo,
 		processInfo)
 	return err
+}
+
+// GetBuild ...
+func GetBuild(raw string) string {
+	// Microsoft Windows [Version 10.0.18363.778]
+	var re = regexp.MustCompile(`(?P<build>[\d+\.]+)`)
+	version := re.FindString(raw)
+	return version
+}
+
+// GetHotfixes ...
+func GetHotfixes(raw string) []string {
+	// HOSTNAME Update KB4537572 NT AUTHORITY\SYSTEM 3/31/2020 12:00:00 AM
+	kbs := []string{}
+	var re = regexp.MustCompile(`(?m)(?P<kb>KB\d+)`)
+	for _, match := range re.FindAllString(raw, -1) {
+		kbs = append(kbs, match)
+	}
+	return kbs
 }

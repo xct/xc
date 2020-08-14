@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"../shell"
-	"../utils"
 )
 
 // https://www.catalog.update.microsoft.com/Home.aspx
@@ -23,10 +22,10 @@ type Vuln interface {
 func Check(c net.Conn) {
 	var raw string
 	raw, _ = shell.ExecOut("ver")
-	build := utils.GetBuild(raw)
+	build := shell.GetBuild(raw)
 	version, _ := shell.ExecPSOut(`(Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").ReleaseId`) // e.g. 1909
 	raw, _ = shell.ExecPSOut("get-hotfix")
-	hotfixes := utils.GetHotfixes(raw)
+	hotfixes := shell.GetHotfixes(raw)
 
 	result := "\n"
 	versionInt, _ := strconv.Atoi(strings.TrimSuffix(version, "\r\n"))

