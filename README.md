@@ -1,6 +1,6 @@
 # xc
 
-Netcat like reverse shell for Linux & Windows. This is still experimental so pull requests are welcome :)
+Netcat like reverse shell for Linux & Windows. This is still experimental - pull requests are welcome :)
 
 ## Features
 
@@ -88,5 +88,3 @@ Linux:
 ```
 make
 ```
-
-You probably want to replace the ssh keys in the keys folder if you plan to use the ssh server on linux. These will be used to spawn a ssh server with the !ssh command on linux.

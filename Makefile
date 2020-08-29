@@ -22,6 +22,7 @@ windowsArm64:
 	GOOS=windows GOARCH=arm ${BUILD} -o ${OUT_WINDOWS_ARM} ${SRC}
 
 clean:
+	mkdir -p files/keys
 	yes 'y' | ssh-keygen -t ed25519 -f files/keys/key -q -N ""
 	yes 'y' | ssh-keygen -f host_dsa -N '' -t dsa -f files/keys/host_dsa -q -N ""
 	yes 'y' | ssh-keygen -f host_rsa -N '' -t rsa -f files/keys/host_rsa -q -N ""
