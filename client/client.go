@@ -34,7 +34,7 @@ func splitArgs(cmd string) []string{
 			args = append(args, current)
 			current = ""
 		} else {
-			if char != "\\" {
+			if char != "\\" || (last == "\\" && char =="\\") {
 				current += char
 			}			
 			last = char
