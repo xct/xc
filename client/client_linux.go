@@ -31,7 +31,7 @@ func Run(s *yamux.Session, c net.Conn) {
 	for scanner.Scan() {
 		command := scanner.Text()
 		if len(command) > 1 {
-			argv := strings.Split(command, " ")
+			argv := splitArgs(command)
 			// we only handle commands here that do something on the client side
 			switch argv[0] {
 			case "!help":

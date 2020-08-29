@@ -38,7 +38,11 @@ func Init(c net.Conn) {
 
 // Execute ...
 func Execute(pluginName string, c net.Conn) {
-	plugins[pluginName].Execute(c)
+	if _, ok := plugins[pluginName]; ok {
+    	plugins[pluginName].Execute(c)
+	} else {
+		c.Write([]byte("[!] Plugin does not exist\n"))
+	}	
 }
 
 // List ...

@@ -21,4 +21,4 @@ plugins/*
 !plugins/plugins.go
 shell/keys.go
 meter/sc.go
-keys/*
+files/keys/*
