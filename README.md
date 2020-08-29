@@ -75,6 +75,8 @@ Netcat like reverse shell for Linux & Windows. This is still experimental - pull
 ## Setup
 
 ``` 
+go get golang.org/x/sys/windows
+go get golang.org/x/text/encoding/unicode
 go get github.com/hashicorp/yamux
 go get github.com/ropnop/go-clr
 ``` 
