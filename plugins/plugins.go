@@ -26,6 +26,10 @@ func Init(c net.Conn) {
 
 	/* Modify  End */
 
+	if len(plugins) < 1 {
+		return
+	}
+
 	// execute plugins that run on startup (auto)
 	c.Write([]byte("\n[*] Auto-Plugins:\n"))
 	for _, plugin := range plugins {
@@ -39,10 +43,10 @@ func Init(c net.Conn) {
 // Execute ...
 func Execute(pluginName string, c net.Conn) {
 	if _, ok := plugins[pluginName]; ok {
-    	plugins[pluginName].Execute(c)
+		plugins[pluginName].Execute(c)
 	} else {
 		c.Write([]byte("[!] Plugin does not exist\n"))
-	}	
+	}
 }
 
 // List ...

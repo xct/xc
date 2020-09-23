@@ -143,7 +143,6 @@ func Run(s *yamux.Session, c net.Conn) {
 	gs = s
 	session = s
 	defer c.Close()
-	fmt.Printf("[xc]:")
 	sr := sendReader(os.Stdin)  // intercepts input that is given on stdin and then send to the network
 	rw := recvWriter(os.Stdout) // intercepts output that is to received from network andthen  send to stdout
 	go io.Copy(c, sr)
