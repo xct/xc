@@ -7,7 +7,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"os/user"
 	"strings"
 	"time"
 
@@ -24,8 +23,10 @@ import (
 func Run(s *yamux.Session, c net.Conn) {
 	defer c.Close()
 	scanner := bufio.NewScanner(c)
-	usr, _ := user.Current()
-	homedir := usr.HomeDir
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		homedir = "C:"
+	}
 	// init
 	plugins.Init(c)
 	prompt(c)
