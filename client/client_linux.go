@@ -48,6 +48,10 @@ func Run(s *yamux.Session, c net.Conn) {
 				usage += "   - local portforwarding (like ssh -L)\n"
 				usage += " !rfwd <remoteport> <localaddr> <localport>\n"
 				usage += "   - remote portforwarding (like ssh -R)\n"
+				usage += " !lsfwd\n"
+				usage += "   - lists active forwards\n"
+				usage += " !rmfwd <index>\n"
+				usage += "   - removes forward by index\n"
 				usage += " !plugins\n"
 				usage += "   - lists available plugins\n"
 				usage += " !plugin <plugin>\n"
@@ -101,19 +105,68 @@ func Run(s *yamux.Session, c net.Conn) {
 				prompt(c)
 			case "!lfwd":
 				if len(argv) == 4 {
-					host := argv[2]
-					port := argv[3]
-					go lfwd(host, port, s, c)
+					lport := argv[1]
+					raddr := argv[2]
+					rport := argv[3]
+					fwd := utils.Forward{lport, rport, raddr, make(chan bool)}
+					portAvailable := true
+					for _, item := range activeForwards {
+						if item.LPort == lport {
+							portAvailable = false
+							break
+						}
+					}
+					if portAvailable {
+						go lfwd(fwd, s, c)
+						activeForwards = append(activeForwards, fwd)
+					}
 				} else {
 					c.Write([]byte("Usage: !lfwd <localport> <remoteaddr> <remoteport> (opens local port)\n"))
 				}
 				prompt(c)
 			case "!rfwd":
 				if len(argv) == 4 {
-					port := argv[1]
-					go rfwd(port, s, c)
+					lport := argv[1]
+					raddr := argv[2]
+					rport := argv[3]
+					fwd := utils.Forward{lport, rport, raddr, make(chan bool)}
+
+					portAvailable := true
+					for _, item := range activeForwards {
+						if item.LPort == lport {
+							portAvailable = false
+							break
+						}
+					}
+					if portAvailable {
+						go rfwd(fwd, s, c)
+						activeForwards = append(activeForwards, fwd)
+					} else {
+						c.Write([]byte(fmt.Sprintf("Can not comply - Remote Port %s already in use.\n", lport)))
+					}
+				}
+				prompt(c)
+			case "!lsfwd":
+				c.Write([]byte("Active Port Forwarding:\n"))
+				index := 0
+				remoteAddr := c.RemoteAddr().String()
+				remoteAddr = remoteAddr[:strings.LastIndex(remoteAddr, ":")]
+				localAddr := c.LocalAddr().String()
+				localAddr = localAddr[:strings.LastIndex(localAddr, ":")]
+				for _, v := range activeForwards {
+					c.Write([]byte(fmt.Sprintf("[%d] Traffic to %s:%s on %s redirected to %s:%s\n", index, v.Addr, v.RPort, remoteAddr, localAddr, v.LPort)))
+					index++
+				}
+				prompt(c)
+			case "!rmfwd":
+				if len(argv) == 2 {
+					index, _ := strconv.Atoi(argv[1])
+					// remove index and stop forward
+					forward := activeForwards[index]
+					forward.Quit <- true
+					activeForwards = append(activeForwards[:index], activeForwards[index+1:]...)
 				} else {
-					c.Write([]byte("Usage: !rfwd <remoteport> <localaddr> <localport> (opens remote port)\n"))
+					c.Write([]byte("Usage: !rmfwd <index>\n"))
 				}
 				prompt(c)
 			case "!shell":

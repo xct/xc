@@ -20,6 +20,14 @@ import (
 	"github.com/hashicorp/yamux"
 )
 
+// Forward is the port forwarding struct
+type Forward struct {
+	LPort string
+	RPort string
+	Addr  string
+	Quit  chan bool
+}
+
 // AESKEY is used to encrypt shellcode on compiletime & decrypt it at runtime
 var AESKEY = []byte("5339679294566578")
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -247,4 +255,9 @@ func Decrypt(key []byte, text []byte) ([]byte, error) {
 	paddingLen := int(decodedCipherMsg[length-1])
 	result := decodedCipherMsg[:(length - paddingLen)]
 	return result, nil
+}
+
+// RemoveIndex ...
+func RemoveIndex(s []int, index int) []int {
+	return append(s[:index], s[index+1:]...)
 }

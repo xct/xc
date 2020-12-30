@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/yamux"
 )
 
+var activeForwards []utils.Forward
+
 // splitArgs
 func splitArgs(cmd string) []string {
 	args := []string{}
@@ -55,43 +57,60 @@ func prompt(c net.Conn) {
 	fmt.Fprintf(c, fmt.Sprintf("[xc: %s]: ", cwd))
 }
 
-func lfwd(host string, port string, s *yamux.Session, c net.Conn) {
-	for {
+func lfwd(fwd utils.Forward, s *yamux.Session, c net.Conn) {
+	go func() {
 		proxy, err := s.Accept()
 		if err != nil {
-			log.Println(err)
+			//log.Println(err)
 			return
 		}
-		fwdCon, err := net.Dial("tcp", fmt.Sprintf("%s:%s", host, port))
+		fwdCon, err := net.Dial("tcp", fmt.Sprintf("%s:%s", fwd.Addr, fwd.RPort))
 		if err != nil {
-			log.Println(err)
+			//log.Println(err)
 			return
 		}
 		defer fwdCon.Close()
 		go utils.CopyIO(fwdCon, proxy)
 		go utils.CopyIO(proxy, fwdCon)
+	}()
+	for {
+		select {
+		case <-fwd.Quit:
+			return
+		}
 	}
 }
 
 // opens the listening socket on the client side
-func rfwd(port string, session *yamux.Session, c net.Conn) {
-	ln, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
+func rfwd(fwd utils.Forward, session *yamux.Session, c net.Conn) {
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%s", fwd.LPort))
 	if err != nil {
 		log.Println(err)
+		return
 	}
-	c.Write([]byte(fmt.Sprintf("Client listening on %s\n", port)))
+	go func() {
+		for {
+			fwdCon, err := ln.Accept()
+			if err != nil && fwdCon != nil {
+				defer fwdCon.Close()
+				if err != nil {
+					//log.Println(err)
+				}
+				proxy, err := session.Open()
+				if err != nil {
+					//log.Println(err)
+				}
+				go utils.CopyIO(fwdCon, proxy)
+				go utils.CopyIO(proxy, fwdCon)
+			}
+		}
+	}()
+	// Wait for exit signal
 	for {
-		fwdCon, err := ln.Accept()
-		defer fwdCon.Close()
-		if err != nil {
-			log.Println(err)
-			c.Write([]byte(fmt.Sprintf("Remote forwarding caused an error %s\n", err)))
+		select {
+		case <-fwd.Quit:
+			ln.Close()
+			return
 		}
-		proxy, err := session.Open()
-		if err != nil {
-			log.Println(err)
-		}
-		go utils.CopyIO(fwdCon, proxy)
-		go utils.CopyIO(proxy, fwdCon)
 	}
 }

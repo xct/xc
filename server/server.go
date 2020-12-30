@@ -6,6 +6,8 @@ import (
 	"log"
 	"net"
 	"os"
+	"os/signal"
+	"strconv"
 	"strings"
 	"time"
 
@@ -49,44 +51,66 @@ var (
 	session *yamux.Session
 )
 
+var sigChan = make(chan os.Signal, 1)
+
+var activeForwards []utils.Forward
+
 // opens the listening socket on the server side
-func lfwd(port string) {
-	ln, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
+func lfwd(fwd utils.Forward) {
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%s", fwd.LPort))
 	if err != nil {
-		log.Fatalln(err)
+		log.Println(err)
+		return
 	}
-	log.Printf("Listening on %s\n", port)
+	go func() {
+		for {
+			fwdCon, err := ln.Accept()
+			if err != nil && fwdCon != nil {
+				defer fwdCon.Close()
+				if err != nil {
+					//log.Println(err)
+				}
+				proxy, err := session.Open()
+				if err != nil {
+					//log.Println(err)
+				}
+				go utils.CopyIO(fwdCon, proxy)
+				go utils.CopyIO(proxy, fwdCon)
+			}
+		}
+	}()
+	// Wait for exit signal
 	for {
-		fwdCon, err := ln.Accept()
-		defer fwdCon.Close()
-		if err != nil {
-			log.Fatalln(err)
+		select {
+		case <-fwd.Quit:
+			ln.Close()
+			return
 		}
-		proxy, err := session.Open()
-		if err != nil {
-			panic(err)
-		}
-		go utils.CopyIO(fwdCon, proxy)
-		go utils.CopyIO(proxy, fwdCon)
 	}
 }
 
 // connects to the listening port on the client side
-func rfwd(host string, port string, s *yamux.Session, c net.Conn) {
-	for {
+func rfwd(fwd utils.Forward, s *yamux.Session, c net.Conn) {
+	go func() {
 		proxy, err := s.Accept()
 		if err != nil {
-			log.Println(err)
+			//log.Println(err)
 			return
 		}
-		fwdCon, err := net.Dial("tcp", fmt.Sprintf("%s:%s", host, port))
+		fwdCon, err := net.Dial("tcp", fmt.Sprintf("%s:%s", fwd.Addr, fwd.RPort))
 		if err != nil {
-			log.Println(err)
+			//log.Println(err)
 			return
 		}
 		defer fwdCon.Close()
 		go utils.CopyIO(fwdCon, proxy)
 		go utils.CopyIO(proxy, fwdCon)
+	}()
+	for {
+		select {
+		case <-fwd.Quit:
+			return
+		}
 	}
 }
 
@@ -112,13 +136,39 @@ func handleCmd(buf []byte) []byte {
 	case "!lfwd":
 		if len(argv) == 4 {
 			lport := argv[1]
-			go lfwd(lport)
+			raddr := argv[2]
+			rport := argv[3]
+			fwd := utils.Forward{lport, rport, raddr, make(chan bool)}
+
+			portAvailable := true
+			for _, item := range activeForwards {
+				if item.LPort == lport {
+					portAvailable = false
+					break
+				}
+			}
+			if portAvailable {
+				go lfwd(fwd)
+				activeForwards = append(activeForwards, fwd)
+			} else {
+				log.Printf("Can not comply - Local Port %s already in use.\n", lport)
+			}
 		}
 	case "!rfwd":
 		if len(argv) == 4 {
-			host := argv[2]
-			port := argv[3]
-			go rfwd(host, port, gs, gc)
+			lport := argv[1]
+			raddr := argv[2]
+			rport := argv[3]
+			fwd := utils.Forward{lport, rport, raddr, make(chan bool)}
+			go rfwd(fwd, gs, gc)
+			activeForwards = append(activeForwards, fwd)
+		}
+	case "!rmfwd":
+		if len(argv) == 2 {
+			index, _ := strconv.Atoi(argv[1])
+			forward := activeForwards[index]
+			forward.Quit <- true
+			activeForwards = append(activeForwards[:index], activeForwards[index+1:]...)
 		}
 	case "!upload":
 		if len(argv) != 3 {
@@ -139,6 +189,14 @@ func handleCmd(buf []byte) []byte {
 
 // Run runs the main server loop
 func Run(s *yamux.Session, c net.Conn) {
+	signal.Notify(sigChan, os.Interrupt)
+	go func() {
+		for {
+			<-sigChan
+			// Todo: Exit from !shell or !powershell
+			fmt.Println("Use !exit to exit xc")
+		}
+	}()
 	gc = c
 	gs = s
 	session = s
