@@ -52,8 +52,8 @@ var (
 )
 
 var sigChan = make(chan os.Signal, 1)
-
 var activeForwards []utils.Forward
+var cmdSession *yamux.Session
 
 // opens the listening socket on the server side
 func lfwd(fwd utils.Forward) {
@@ -189,21 +189,29 @@ func handleCmd(buf []byte) []byte {
 
 // Run runs the main server loop
 func Run(s *yamux.Session, c net.Conn) {
-	signal.Notify(sigChan, os.Interrupt)
-	go func() {
-		for {
-			<-sigChan
-			// Todo: Exit from !shell or !powershell
-			fmt.Println("Use !exit to exit xc")
-		}
-	}()
 	gc = c
 	gs = s
 	session = s
 	defer c.Close()
-	fmt.Printf("[xc]:")
+	//fmt.Printf("[xc]:")
+
+	// open 2nd session for testing
+	cmdSession, err := session.Open()
+	if err != nil {
+		log.Println(err)
+	}
+
 	sr := sendReader(os.Stdin)  // intercepts input that is given on stdin and then send to the network
-	rw := recvWriter(os.Stdout) // intercepts output that is to received from network andthen  send to stdout
+	rw := recvWriter(os.Stdout) // intercepts output that is to received from network and then send to stdout
+
+	// Todo: fix this shit
+	signal.Notify(sigChan, os.Interrupt)
+	go func() {
+		for {
+			<-sigChan
+			io.WriteString(cmdSession, "!sigint\n")
+		}
+	}()
 	go io.Copy(c, sr)
 	io.Copy(rw, c)
 }

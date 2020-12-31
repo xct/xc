@@ -7,7 +7,7 @@ SRC=xc.go
 
 AUTH_KEY = 
 
-all: clean linux64 windows64 windowsArm64    
+all: clean linux64 windows64 #windowsArm64    
 
 linux64:
 	GOOS=linux GOARCH=amd64 ${GENERATE}

