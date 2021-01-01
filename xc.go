@@ -7,9 +7,7 @@ import (
 	"math/rand"
 	"net"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 	"time"
 
 	"./client"
@@ -38,7 +36,7 @@ func main() {
 		\ \/ / __|
 		>  < (__ 
 		/_/\_\___| by @xct_de
-		           build: GLvLrMgcikmgHFyx
+		           build: 0000000000000000
 			`
 		fmt.Println(banner)
 
@@ -62,7 +60,6 @@ func main() {
 				log.Println(err)
 				continue
 			}
-			signal.Notify(make(chan os.Signal))
 			stream, err := session.Accept()
 			if err != nil {
 				log.Println(err)
@@ -70,7 +67,6 @@ func main() {
 			}
 			log.Printf("Stream established")
 			server.Run(session, stream)
-			signal.Reset(syscall.SIGINT)
 			conn.Close()
 		}
 	} else {
