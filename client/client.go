@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -111,7 +112,7 @@ func handleSharedCommand(s *yamux.Session, c net.Conn, argv []string, usage stri
 			lport := argv[1]
 			raddr := argv[2]
 			rport := argv[3]
-			fwd := utils.Forward{lport, rport, raddr, make(chan bool)}
+			fwd := utils.Forward{lport, rport, raddr, make(chan bool), true, true}
 			portAvailable := true
 			for _, item := range activeForwards {
 				if item.LPort == lport {
@@ -133,7 +134,7 @@ func handleSharedCommand(s *yamux.Session, c net.Conn, argv []string, usage stri
 			lport := argv[1]
 			raddr := argv[2]
 			rport := argv[3]
-			fwd := utils.Forward{lport, rport, raddr, make(chan bool)}
+			fwd := utils.Forward{lport, rport, raddr, make(chan bool), false, true}
 
 			portAvailable := true
 			for _, item := range activeForwards {
@@ -146,7 +147,7 @@ func handleSharedCommand(s *yamux.Session, c net.Conn, argv []string, usage stri
 				go rfwd(fwd, s, c)
 				activeForwards = append(activeForwards, fwd)
 			} else {
-				c.Write([]byte(fmt.Sprintf("Can not comply - Remote Port %s already in use.\n", lport)))
+				c.Write([]byte(fmt.Sprintf("Remote Port %s already in use.\n", lport)))
 			}
 		}
 		prompt(c)
@@ -159,7 +160,12 @@ func handleSharedCommand(s *yamux.Session, c net.Conn, argv []string, usage stri
 		localAddr := c.LocalAddr().String()
 		localAddr = localAddr[:strings.LastIndex(localAddr, ":")]
 		for _, v := range activeForwards {
-			c.Write([]byte(fmt.Sprintf("[%d] Listening on %s:%s, Traffic redirect to %s:%s\n", index, localAddr, v.LPort, remoteAddr, v.RPort)))
+			if v.Local {
+				c.Write([]byte(fmt.Sprintf("[%d] Listening on %s:%s, Traffic redirect to %s (%s:%s)\n", index, remoteAddr, v.LPort, localAddr, v.Addr, v.RPort)))
+			} else {
+				c.Write([]byte(fmt.Sprintf("[%d] Listening on %s:%s, Traffic redirect to %s (%s:%s)\n", index, localAddr, v.LPort, remoteAddr, v.Addr, v.RPort)))
+			}
+
 			index++
 		}
 		prompt(c)
@@ -240,12 +246,10 @@ func handleSharedCommand(s *yamux.Session, c net.Conn, argv []string, usage stri
 		prompt(c)
 	case "!sigint":
 		handled = true
-		// as soon as a shell is started this handler will no longer accept commands
-		fmt.Println("sigint reached client")
-		// is a !shell active ?
 		shellQuit <- true
-	default:
-		// pass
+	case "!debug":
+		handled = true
+		fmt.Printf("Active Goroutines: %d\n", runtime.NumGoroutine())
 	}
 	return handled
 }
@@ -297,29 +301,35 @@ func prompt(c net.Conn) {
 
 func lfwd(fwd utils.Forward, s *yamux.Session, c net.Conn) {
 	go func() {
-		proxy, err := s.Accept()
-		if err != nil {
-			//log.Println(err)
-			return
+		for {
+			proxy, err := s.Accept()
+			if err != nil {
+				//log.Println(err)
+				return
+			}
+			fwdCon, err := net.Dial("tcp", fmt.Sprintf("%s:%s", fwd.Addr, fwd.RPort))
+			if err != nil {
+				//log.Println(err)
+				return
+			}
+			defer fwdCon.Close()
+			go utils.CopyIO(fwdCon, proxy)
+			go utils.CopyIO(proxy, fwdCon)
+			if !fwd.Active {
+				return
+			}
 		}
-		fwdCon, err := net.Dial("tcp", fmt.Sprintf("%s:%s", fwd.Addr, fwd.RPort))
-		if err != nil {
-			//log.Println(err)
-			return
-		}
-		defer fwdCon.Close()
-		go utils.CopyIO(fwdCon, proxy)
-		go utils.CopyIO(proxy, fwdCon)
 	}()
 	for {
 		select {
 		case <-fwd.Quit:
+			fwd.Active = false
 			return
 		}
 	}
 }
 
-// opens the listening socket on the client side
+// opens the listening socket on the client (remote) side
 func rfwd(fwd utils.Forward, session *yamux.Session, c net.Conn) {
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%s", fwd.LPort))
 	if err != nil {
@@ -328,25 +338,31 @@ func rfwd(fwd utils.Forward, session *yamux.Session, c net.Conn) {
 	}
 	go func() {
 		for {
+			// allow lots of connections on a port forward
 			fwdCon, err := ln.Accept()
-			if err != nil && fwdCon != nil {
+			if err == nil && fwdCon != nil {
 				defer fwdCon.Close()
 				if err != nil {
-					//log.Println(err)
+					log.Println(err)
 				}
 				proxy, err := session.Open()
 				if err != nil {
-					//log.Println(err)
+					log.Println(err)
 				}
 				go utils.CopyIO(fwdCon, proxy)
 				go utils.CopyIO(proxy, fwdCon)
 			}
+			if !fwd.Active {
+				return
+			}
 		}
 	}()
-	// Wait for exit signal
+	// Block until exit signal (this is called as goroutine so its fine)
 	for {
 		select {
 		case <-fwd.Quit:
+			// force close the worker routine by closing the listener && preventing another accept
+			fwd.Active = false
 			ln.Close()
 			return
 		}

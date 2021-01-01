@@ -28,6 +28,7 @@ func Run(s *yamux.Session, c net.Conn) {
 	scanner := bufio.NewScanner(c)
 	usr, _ := user.Current()
 	homedir := usr.HomeDir
+
 	// init
 	plugins.Init(c)
 	prompt(c)

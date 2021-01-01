@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -65,17 +66,20 @@ func lfwd(fwd utils.Forward) {
 	go func() {
 		for {
 			fwdCon, err := ln.Accept()
-			if err != nil && fwdCon != nil {
+			if err == nil && fwdCon != nil {
 				defer fwdCon.Close()
 				if err != nil {
-					//log.Println(err)
+					log.Println(err)
 				}
 				proxy, err := session.Open()
 				if err != nil {
-					//log.Println(err)
+					log.Println(err)
 				}
 				go utils.CopyIO(fwdCon, proxy)
 				go utils.CopyIO(proxy, fwdCon)
+			}
+			if !fwd.Active {
+				return
 			}
 		}
 	}()
@@ -83,6 +87,7 @@ func lfwd(fwd utils.Forward) {
 	for {
 		select {
 		case <-fwd.Quit:
+			fwd.Active = false
 			ln.Close()
 			return
 		}
@@ -92,30 +97,38 @@ func lfwd(fwd utils.Forward) {
 // connects to the listening port on the client side
 func rfwd(fwd utils.Forward, s *yamux.Session, c net.Conn) {
 	go func() {
-		proxy, err := s.Accept()
-		if err != nil {
-			//log.Println(err)
-			return
+		for {
+			// accept the virtual connection initiated by the client
+			proxy, err := s.Accept()
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			// send data to the redirect target (could be into the void..)
+			fwdCon, err := net.Dial("tcp", fmt.Sprintf("%s:%s", fwd.Addr, fwd.RPort))
+			if err != nil {
+				log.Println(err)
+				break
+			}
+			defer fwdCon.Close()
+			go utils.CopyIO(fwdCon, proxy)
+			go utils.CopyIO(proxy, fwdCon)
+			if !fwd.Active {
+				return
+			}
 		}
-		fwdCon, err := net.Dial("tcp", fmt.Sprintf("%s:%s", fwd.Addr, fwd.RPort))
-		if err != nil {
-			//log.Println(err)
-			return
-		}
-		defer fwdCon.Close()
-		go utils.CopyIO(fwdCon, proxy)
-		go utils.CopyIO(proxy, fwdCon)
 	}()
 	for {
 		select {
 		case <-fwd.Quit:
+			fwd.Active = false
 			return
 		}
 	}
 }
 
-func exit() {
-	time.Sleep(1000 * time.Millisecond)
+func quit() {
+	time.Sleep(800 * time.Millisecond)
 	fmt.Println("Bye!")
 	os.Exit(0)
 }
@@ -127,7 +140,7 @@ func handleCmd(buf []byte) []byte {
 	switch argv[0] {
 	case "!exit":
 		// defer exit so we can sent it to the client aswell
-		go exit()
+		go quit()
 	case "!download":
 		if len(argv) == 3 {
 			dst := argv[2]
@@ -138,7 +151,7 @@ func handleCmd(buf []byte) []byte {
 			lport := argv[1]
 			raddr := argv[2]
 			rport := argv[3]
-			fwd := utils.Forward{lport, rport, raddr, make(chan bool)}
+			fwd := utils.Forward{lport, rport, raddr, make(chan bool), true, true}
 
 			portAvailable := true
 			for _, item := range activeForwards {
@@ -151,7 +164,7 @@ func handleCmd(buf []byte) []byte {
 				go lfwd(fwd)
 				activeForwards = append(activeForwards, fwd)
 			} else {
-				log.Printf("Can not comply - Local Port %s already in use.\n", lport)
+				log.Printf("Local Port %s already in use.\n", lport)
 			}
 		}
 	case "!rfwd":
@@ -159,7 +172,7 @@ func handleCmd(buf []byte) []byte {
 			lport := argv[1]
 			raddr := argv[2]
 			rport := argv[3]
-			fwd := utils.Forward{lport, rport, raddr, make(chan bool)}
+			fwd := utils.Forward{lport, rport, raddr, make(chan bool), false, true}
 			go rfwd(fwd, gs, gc)
 			activeForwards = append(activeForwards, fwd)
 		}
@@ -170,6 +183,8 @@ func handleCmd(buf []byte) []byte {
 			forward.Quit <- true
 			activeForwards = append(activeForwards[:index], activeForwards[index+1:]...)
 		}
+	case "!vulns":
+		fmt.Println("Be patient - this can take a few minutes..")
 	case "!upload":
 		if len(argv) != 3 {
 			return buf
@@ -183,6 +198,8 @@ func handleCmd(buf []byte) []byte {
 		}
 		src := argv[1]
 		go utils.UploadListen(src, session)
+	case "!debug":
+		fmt.Printf("Active Goroutines: %d\n", runtime.NumGoroutine())
 	}
 	return buf
 }
@@ -195,7 +212,7 @@ func Run(s *yamux.Session, c net.Conn) {
 	defer c.Close()
 	//fmt.Printf("[xc]:")
 
-	// open 2nd session for testing
+	// open 2nd session for signals ("virtual connection")
 	cmdSession, err := session.Open()
 	if err != nil {
 		log.Println(err)
@@ -204,7 +221,6 @@ func Run(s *yamux.Session, c net.Conn) {
 	sr := sendReader(os.Stdin)  // intercepts input that is given on stdin and then send to the network
 	rw := recvWriter(os.Stdout) // intercepts output that is to received from network and then send to stdout
 
-	// Todo: fix this shit
 	signal.Notify(sigChan, os.Interrupt)
 	go func() {
 		for {

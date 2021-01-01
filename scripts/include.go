@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -14,8 +15,23 @@ import (
 	"../utils"
 )
 
+func copyFile(src string, dst string) {
+	input, err := ioutil.ReadFile(src)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	err = ioutil.WriteFile(dst, input, 0644)
+	if err != nil {
+		fmt.Println("Error creating", dst)
+		fmt.Println(err)
+		return
+	}
+}
+
 func main() {
 	// make build unique
+	copyFile("xc.go", "xc.bak")
 	data, err := ioutil.ReadFile("xc.go")
 	if err != nil {
 		log.Fatal(err)
@@ -61,4 +77,14 @@ func main() {
 	}
 	out.Write([]byte(")\n"))
 
+	// load itm4ns script
+	copyFile("client/client_windows.go", "client/client_windows.bak")
+	data, err = ioutil.ReadFile("client/client_windows.go")
+	if err != nil {
+		log.Fatal(err)
+	}
+	script, _ := ioutil.ReadFile("files/powershell/PrivescCheck.ps1")
+	scriptEncoded := []byte(base64.StdEncoding.EncodeToString(script))
+	data = bytes.Replace(data, []byte("<PRIVESCCHECK>"), scriptEncoded, 1)
+	ioutil.WriteFile("client/client_windows.go", data, 0644)
 }

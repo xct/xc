@@ -23,8 +23,8 @@ func Check(c net.Conn) {
 	var raw string
 	raw, _ = shell.ExecOut("ver")
 	build := shell.GetBuild(raw)
-	version, _ := shell.ExecPSOut(`(Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").ReleaseId`) // e.g. 1909
-	raw, _ = shell.ExecPSOut("get-hotfix")
+	version, _ := shell.ExecPSOut(`(Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").ReleaseId`, false) // e.g. 1909
+	raw, _ = shell.ExecPSOut("get-hotfix", false)
 	hotfixes := shell.GetHotfixes(raw)
 
 	result := "\n"
