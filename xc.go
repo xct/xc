@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"regexp"
 
 	"./client"
 	"./server"
@@ -82,7 +83,11 @@ func main() {
 			parts := strings.Split(name, "_")
 			if len(parts) == 3 {
 				ip = parts[1]
-				port = strings.TrimRight(parts[2], ".exe")
+
+				// split by first nonnumeric
+				var re = regexp.MustCompile(`([0-9]*).*`)
+				// port = strings.TrimRight(parts[2], ".exe")
+				port = re.ReplaceAllString(parts[2], `$1`)
 				fmt.Printf("Detected client arguments from executable name: %s:%s\n", ip, port)
 				init = true
 			} else {
