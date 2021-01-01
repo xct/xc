@@ -9,7 +9,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"os/user"
 	"time"
 
 	"../plugins"
@@ -32,8 +31,10 @@ func Run(s *yamux.Session, c net.Conn) {
 	signalScanner := bufio.NewScanner(signalSession)
 
 	scanner := bufio.NewScanner(c)
-	usr, _ := user.Current()
-	homedir := usr.HomeDir
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		homedir = "C:"
+	}
 	// init
 	plugins.Init(c)
 	prompt(c)
