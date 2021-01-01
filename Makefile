@@ -26,7 +26,8 @@ windows64:
 	${WINDOWS_EVADE}	
 
 clean:
-	rmdir --ignore-fail-on-non-empty files/keys
+	- rm files/keys/host*
+	- rm files/keys/key* 
 	mkdir -p files/keys
 	yes 'y' | ssh-keygen -t ed25519 -f files/keys/key -q -N ""
 	yes 'y' | ssh-keygen -f host_dsa -N '' -t dsa -f files/keys/host_dsa -q -N ""
