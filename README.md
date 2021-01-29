@@ -97,6 +97,7 @@ go get github.com/hashicorp/yamux
 go get github.com/ropnop/go-clr
 pip3 install donut-shellcode
 sudo apt-get install rlwrap
+sudo apt-get install upx
 ``` 
 
 Linux:
@@ -108,6 +109,8 @@ make
 
 * When !lfwd fails due to lack of permissions (missing sudo), the entry in !lsfwd is still created
 * Can't Ctrl+C out of powershell started from !shell
+* Tested:
+  - Kali (Attacker) Win 10 (Victim)
 
 ## Credits
 

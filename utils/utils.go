@@ -259,16 +259,15 @@ func Decrypt(key []byte, text []byte) ([]byte, error) {
 	return result, nil
 }
 
-// DecryptString uses base64 & xor for some very basic av evasion use https://gchq.github.io/CyberChef/#recipe=XOR(%7B'option':'Latin1','string':'XCT'%7D,'Standard',false)To_Base64('A-Za-z0-9%2B/%3D')
-func DecryptString(cipher string) string {
+// https://gchq.github.io/CyberChef/#recipe=XOR(%7B'option':'Latin1','string':'XCT'%7D,'Standard',false)To_Base64('A-Za-z0-9%2B/%3D')
+func Bake(cipher string) string {
 	tmp, _ := base64.StdEncoding.DecodeString(cipher)
-	for i := 0; i <= len(tmp)-3; i += 3 {
-		tmp[i] ^= 0x58
-		tmp[i+1] ^= 0x43
-		tmp[i+2] ^= 0x54
+	key := "xct"
+	baked := ""
+	for i := 0; i < len(tmp); i++ {
+		baked += string(tmp[i] ^ key[i%len(key)])
 	}
-	clear := string(tmp)
-	return clear
+	return baked
 }
 
 // RemoveIndex ...
