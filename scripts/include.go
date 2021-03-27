@@ -85,6 +85,6 @@ func main() {
 	}
 	script, _ := ioutil.ReadFile("files/powershell/PrivescCheck.ps1")
 	scriptEncoded := []byte(base64.StdEncoding.EncodeToString(script))
-	data = bytes.Replace(data, []byte("<PRIVESCCHECK>"), scriptEncoded, 1)
+	data = bytes.Replace(data, []byte("§privesccheck§"), scriptEncoded, 1)
 	ioutil.WriteFile("client/client_windows.go", data, 0644)
 }

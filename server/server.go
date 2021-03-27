@@ -55,6 +55,7 @@ var (
 var sigChan = make(chan os.Signal, 1)
 var activeForwards []utils.Forward
 var cmdSession *yamux.Session
+var assemblies = map[string]bool{}
 
 // opens the listening socket on the server side
 func lfwd(fwd utils.Forward) {
@@ -193,11 +194,15 @@ func handleCmd(buf []byte) []byte {
 		go utils.UploadListen(src, session)
 	case "!net":
 		// same as upload for the server side, hosts the .NET assembly we want to execute
-		if len(argv) < 3 {
+		if len(argv) < 2 {
 			return buf
 		}
 		src := argv[1]
-		go utils.UploadListen(src, session)
+		// only need to upload if its a new path (downside: if you change a binary and a known path it won't get reuploaded, in this case !restart)
+		if _, ok := assemblies[src]; !ok {
+			assemblies[src] = true
+			go utils.UploadListen(src, session)
+		}
 	case "!debug":
 		fmt.Printf("Active Goroutines: %d\n", runtime.NumGoroutine())
 	}

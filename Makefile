@@ -1,5 +1,5 @@
-BUILD=go build -ldflags="-s -w" -buildmode=pie -trimpath 
-GENERATE=go generate
+BUILD=GO111MODULE=off go build -ldflags="-s -w" -buildmode=pie -trimpath 
+GENERATE=GO111MODULE=off go generate
 OUT_LINUX=xc
 OUT_WINDOWS=xc.exe
 SRC=xc.go
