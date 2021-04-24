@@ -15,9 +15,8 @@ import (
 	"../plugins"
 	"../shell"
 	"../utils"
-	//"../vulns"
 	"github.com/hashicorp/yamux"
-	"github.com/xct/go-clr"
+	"github.com/ropnop/go-clr"
 )
 
 var assemblies = make(map[string][]byte)

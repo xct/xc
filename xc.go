@@ -14,6 +14,7 @@ import (
 	"./client"
 	"./server"
 	"github.com/hashicorp/yamux"
+	"path/filepath"
 	
 )
 
@@ -38,7 +39,7 @@ func main() {
 		\ \/ / __|
 		>  < (__ 
 		/_/\_\___| by @xct_de
-		           build: yoPdREhTMtyLdOgw
+		           build: 0000000000000000
 			`
 		fmt.Println(banner)
 
@@ -80,11 +81,10 @@ func main() {
 		init := false
 		if flag.NArg() < 2 {
 			// arguments inside the binaries name? (thanks @jkr)
-			name := os.Args[0]
+			name := filepath.Base(os.Args[0])
 			parts := strings.Split(name, "_")
 			if len(parts) == 3 {
 				ip = parts[1]
-
 				// split by first nonnumeric
 				var re = regexp.MustCompile(`([0-9]*).*`)
 				port = re.ReplaceAllString(parts[2], `$1`)

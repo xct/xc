@@ -91,10 +91,10 @@ Usage:
 Make sure you are running golang version 1.15+, older versions will not compile. I tested it on ubuntu: `go version go1.16.2 linux/amd64`.
 
 ``` 
-go get golang.org/x/sys/windows
+go get golang.org/x/sys/...
 go get golang.org/x/text/encoding/unicode
 go get github.com/hashicorp/yamux
-go get github.com/xct/go-clr
+go get github.com/ropnop/go-clr
 pip3 install donut-shellcode
 sudo apt-get install rlwrap
 sudo apt-get install upx
