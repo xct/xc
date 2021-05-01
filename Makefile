@@ -4,7 +4,6 @@ OUT_LINUX=xc
 OUT_WINDOWS=xc.exe
 SRC=xc.go
 LINUX_COMPRESS=upx xc -o xcc; rm xc && mv xcc xc
-WINDOWS_EVADE=python3 gen.py
 XC_POSTGEN=cp xc.bak xc.go; rm xc.bak
 XC_WIN_POSTGEN=cp client/client_windows.bak client/client_windows.go; rm client/client_windows.bak
 
@@ -23,7 +22,6 @@ linux64:
 
 windows64:	
 	GOOS=windows GOARCH=amd64 ${BUILD} -o ${OUT_WINDOWS} ${SRC}	
-	${WINDOWS_EVADE}	
 
 clean:
 	- rm files/keys/host*

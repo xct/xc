@@ -88,7 +88,7 @@ Usage:
 
 ## Setup
 
-Make sure you are running golang version 1.15+, older versions will not compile. I tested it on ubuntu: `go version go1.16.2 linux/amd64`.
+Make sure you are running golang version 1.15+, older versions will not compile. I tested it on ubuntu: `go version go1.16.2 linux/amd64` and kali `go version go1.15.9 linux/amd64`
 
 ``` 
 go get golang.org/x/sys/...
