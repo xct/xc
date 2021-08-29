@@ -1,13 +1,8 @@
 package utils
 
 import (
-	"bytes"
-	"crypto/aes"
-	"crypto/cipher"
-	cr "crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -30,8 +25,7 @@ type Forward struct {
 	Active bool
 }
 
-// AESKEY is used to encrypt shellcode on compiletime & decrypt it at runtime
-var AESKEY = []byte("5339679294566578")
+var key = "§key§"
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 // Exists ...
@@ -219,51 +213,22 @@ func ByteToHex(s []byte) string {
 	return fmt.Sprintf("%s", d[:n])
 }
 
-// Encrypt ...
-func Encrypt(key []byte, text []byte) ([]byte, error) {
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-	paddingLen := aes.BlockSize - (len(text) % aes.BlockSize)
-	paddingText := bytes.Repeat([]byte{byte(paddingLen)}, paddingLen)
-	textWithPadding := append(text, paddingText...)
-	ciphertext := make([]byte, aes.BlockSize+len(textWithPadding))
-	iv := ciphertext[:aes.BlockSize]
-	if _, err := io.ReadFull(cr.Reader, iv); err != nil {
-		return nil, err
-	}
-	cfbEncrypter := cipher.NewCFBEncrypter(block, iv)
-	cfbEncrypter.XORKeyStream(ciphertext[aes.BlockSize:], textWithPadding)
-	return ciphertext, nil
-}
-
-// Decrypt ...
-func Decrypt(key []byte, text []byte) ([]byte, error) {
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-	if (len(text) % aes.BlockSize) != 0 {
-		return nil, errors.New("wrong blocksize")
-	}
-	iv := text[:aes.BlockSize]
-	decodedCipherMsg := text[aes.BlockSize:]
-	cfbDecrypter := cipher.NewCFBDecrypter(block, iv)
-	cfbDecrypter.XORKeyStream(decodedCipherMsg, decodedCipherMsg)
-	length := len(decodedCipherMsg)
-	paddingLen := int(decodedCipherMsg[length-1])
-	result := decodedCipherMsg[:(length - paddingLen)]
-	return result, nil
-}
-
-// https://gchq.github.io/CyberChef/#recipe=XOR(%7B'option':'Latin1','string':'xct'%7D,'Standard',false)To_Base64('A-Za-z0-9%2B/%3D')
 func Bake(cipher string) string {
 	tmp, _ := base64.StdEncoding.DecodeString(cipher)
-	key := "xct"
+	k, _ := hex.DecodeString(key)
 	baked := ""
 	for i := 0; i < len(tmp); i++ {
-		baked += string(tmp[i] ^ key[i%len(key)])
+		baked += string(tmp[i] ^ k[i%len(k)])
+	}
+	return baked
+}
+
+func BBake(cipher string) []byte {
+	tmp, _ := base64.StdEncoding.DecodeString(cipher)
+	k, _ := hex.DecodeString(key)
+	baked := make([]byte, hex.DecodedLen(len(tmp)))
+	for i := 0; i < len(tmp); i++ {
+		baked[i] = tmp[i] ^ k[i%len(k)]
 	}
 	return baked
 }

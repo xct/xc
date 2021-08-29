@@ -1,6 +1,6 @@
-# xc
+# XC
 
-Netcat like reverse shell for Linux & Windows. This is/was my project for learning golang so expect some bugs. If you want to support this project you can reach out to me on twitter or discord - plenty of things to work on ;)
+Netcat like reverse shell for Linux & Windows.
 
 ## Features
 
@@ -42,8 +42,6 @@ Usage:
     * restart xc with the specified user using powershell
   !vulns
     * checks for common vulnerabilities
-  !net <sample.exe> <arg1> <arg2> ...
-    * Uploads & Runs a .NET assembly from memory
 ``` 
 
 ### Linux
@@ -91,18 +89,17 @@ Usage:
 Make sure you are running golang version 1.15+, older versions will not compile. I tested it on ubuntu: `go version go1.16.2 linux/amd64` and kali `go version go1.15.9 linux/amd64`
 
 ``` 
-go get golang.org/x/sys/...
-go get golang.org/x/text/encoding/unicode
-go get github.com/hashicorp/yamux
-go get github.com/ropnop/go-clr
-pip3 install donut-shellcode
-sudo apt-get install rlwrap
-sudo apt-get install upx
+git clone --recurse-submodules https://github.com/xct/xc.git
+
+GO111MODULE=off go get golang.org/x/sys/...
+GO111MODULE=off go get golang.org/x/text/encoding/unicode
+GO111MODULE=off go get github.com/hashicorp/yamux
+sudo apt-get install rlwrap upx
 ``` 
 
 Linux:
 ```
-make
+python3 build.py
 ```
 
 ## Known Issues

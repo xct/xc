@@ -1,3 +1,4 @@
+// +build go1.15,!cgo
 package main
 
 import (
@@ -18,13 +19,12 @@ import (
 	
 )
 
-//go:generate go run scripts/include.go
-
-func usage() {
+func usage() {	
 	fmt.Printf("Usage: \n")
 	fmt.Printf("- Client: xc <ip> <port>\n")
 	fmt.Printf("- Server: xc -l -p <port>\n")
 }
+
 
 func main() {
 	listenPtr := flag.Bool("l", false, "use as server")
@@ -33,16 +33,15 @@ func main() {
 
 	rand.Seed(time.Now().UnixNano())
 	if *listenPtr {
-		// banner
 		banner := `
 		__  _____ 
 		\ \/ / __|
 		>  < (__ 
 		/_/\_\___| by @xct_de
-		           build: 0000000000000000
+		           build: §version§
 			`
 		fmt.Println(banner)
-
+		
 		// server mode
 		listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", *portPtr))
 		if err != nil {
@@ -80,7 +79,7 @@ func main() {
 		)
 		init := false
 		if flag.NArg() < 2 {
-			// arguments inside the binaries name? (thanks @jkr)
+			// (thanks @jkr)
 			name := filepath.Base(os.Args[0])
 			parts := strings.Split(name, "_")
 			if len(parts) == 3 {

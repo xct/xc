@@ -1,0 +1,3 @@
+[submodule "files/powershell/privesccheck"]
+	path = files/powershell/privesccheck
+	url = https://github.com/itm4n/PrivescCheck.git

