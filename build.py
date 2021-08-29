@@ -8,6 +8,7 @@ import random
 import re
 import string
 import binascii
+import time
 warnings.filterwarnings("ignore", category=DeprecationWarning) 
 
 key = os.urandom(32)
@@ -20,6 +21,15 @@ def bake(data):
     return encoded
 
 if __name__ == "__main__":
+
+    # clean & prep
+    print("[+] Preparing Build...")
+    os.system("rm files/keys/host* 2>/dev/null")
+    os.system("rm files/keys/key*  2>/dev/null")
+    os.system("mkdir -p files/keys 2>/dev/null")
+    os.system("yes 'y' 2>/dev/null | ssh-keygen -t ed25519 -f files/keys/key -q -N \"\"")
+    os.system("yes 'y' 2>/dev/null | ssh-keygen -f host_dsa -N '' -t dsa -f files/keys/host_dsa -q -N \"\"")
+    os.system("yes 'y' 2>/dev/null | ssh-keygen -f host_rsa -N '' -t rsa -f files/keys/host_rsa -q -N \"\"")    
 
     # set random version string
     os.system("cp xc.go /tmp/xc.go.bak")
@@ -113,15 +123,6 @@ if __name__ == "__main__":
                 f.write("\"\n")
         f.write(")\n")
 
-    # clean & prep
-    print("[+] Preparing Build...")
-    os.system("rm files/keys/host* 2>/dev/null")
-    os.system("rm files/keys/key*  2>/dev/null")
-    os.system("mkdir -p files/keys 2>/dev/null")
-    os.system("yes 'y' 2>/dev/null | ssh-keygen -t ed25519 -f files/keys/key -q -N \"\"")
-    os.system("yes 'y' 2>/dev/null | ssh-keygen -f host_dsa -N '' -t dsa -f files/keys/host_dsa -q -N \"\"")
-    os.system("yes 'y' 2>/dev/null | ssh-keygen -f host_rsa -N '' -t rsa -f files/keys/host_rsa -q -N \"\"")    
-    
     # build
     print("[+] Building...")
     os.system("rm xc.exe xc 2>/dev/null")

