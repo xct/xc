@@ -106,6 +106,7 @@ func entfernte_port_weiterleitung(fwd utils.Forward, s *yamux.Session, c net.Con
 				return
 			}
 			// send data to the redirect target (could be into the void..)
+			
 			fwdCon, err := net.Dial("tcp", fmt.Sprintf("%s:%s", fwd.Addr, fwd.RPort))
 			if err != nil {
 				log.Println(err)
@@ -117,6 +118,7 @@ func entfernte_port_weiterleitung(fwd utils.Forward, s *yamux.Session, c net.Con
 			if !fwd.Active {
 				return
 			}
+			
 		}
 	}()
 	for {

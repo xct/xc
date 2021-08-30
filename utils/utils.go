@@ -227,7 +227,7 @@ func BBake(cipher string) []byte {
 	tmp, _ := base64.StdEncoding.DecodeString(cipher)
 	k, _ := hex.DecodeString(key)
 	baked := make([]byte, hex.DecodedLen(len(tmp)))
-	for i := 0; i < len(tmp); i++ {
+	for i := 0; i < len(tmp)-1; i++ {
 		baked[i] = tmp[i] ^ k[i%len(k)]
 	}
 	return baked

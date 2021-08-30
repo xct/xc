@@ -1,4 +1,4 @@
-// +build go1.15,!cgo
+// +build go1.15
 package main
 
 import (
