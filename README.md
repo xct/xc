@@ -102,14 +102,7 @@ Linux:
 python3 build.py
 ```
 
-## Known Issues
-
-* When !lfwd fails due to lack of permissions (missing sudo), the entry in !lsfwd is still created
-* Can't Ctrl+C out of powershell started from !shell
-* !net (execute-assembly) fails after using it a few times - for now you can !restart and it might work again
-* Tested:
-  - Kali (Attacker) Win 10 (Victim)
-
 ## Credits
 
-* Included PrivescCheck by itm4n for Windows Clients: https://github.com/itm4n/PrivescCheck  
+* Included for Windows Clients: https://github.com/itm4n/PrivescCheck  
+* Included for Windows Clients: https://github.com/PowerShell/Win32-OpenSSH
