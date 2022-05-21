@@ -15,6 +15,7 @@ import (
 	"./client"
 	"./server"
 	"github.com/hashicorp/yamux"
+	"github.com/libp2p/go-reuseport"
 	"path/filepath"
 	
 )
@@ -43,7 +44,7 @@ func main() {
 		fmt.Println(banner)
 		
 		// server mode
-		listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", *portPtr))
+		listener, err := reuseport.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", *portPtr))
 		if err != nil {
 			log.Fatalln("Unable to bind to port")
 		}
